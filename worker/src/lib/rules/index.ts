@@ -21,6 +21,9 @@ const EMERGENCY_PHRASES = [
   'emergencia', 'urgente', 'inundación', 'tubería rota',
 ]
 
+// NOTE: Substring matching is intentional for simplicity (Phase 1).
+// Known limitations: 'burst' matches 'outburst', speaker-agnostic.
+// TODO: Add word-boundary matching and speaker filtering in a future iteration.
 function hasEmergencySignal(ctx: RuleContext): boolean {
   const lower = ctx.segments.map((s) => s.text.toLowerCase()).join(' ')
   return EMERGENCY_PHRASES.some((p) => lower.includes(p))
@@ -54,7 +57,7 @@ export function runRules(ctx: RuleContext): RuleResult[] {
         dimension: result.dimension,
         triggered: false,
         offered: false,
-        confidence: 0.95,
+        confidence: 0.95, // deterministic convention: all rule results are 0.95
         suppressedReason,
       }]
     }
