@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { safeFetch } from '@/lib/safe-fetch'
+import { toast } from 'sonner'
 
 interface CompanyProfile {
   id: string
@@ -59,9 +61,9 @@ export default function SettingsPage() {
   const [name, setName] = useState('')
   const [state, setState] = useState('')
 
-  const { data: company, isLoading } = useQuery<CompanyProfile>({
+  const { data: company, isLoading, isError, error } = useQuery<CompanyProfile>({
     queryKey: ['settings'],
-    queryFn: () => fetch('/api/settings').then((r) => r.json()),
+    queryFn: () => safeFetch<CompanyProfile>('/api/settings'),
   })
 
   useEffect(() => {
@@ -79,7 +81,11 @@ export default function SettingsPage() {
         body: JSON.stringify(data),
       }).then((r) => r.json()),
     onSuccess: () => {
+      toast.success('Settings saved')
       queryClient.invalidateQueries({ queryKey: ['settings'] })
+    },
+    onError: (err: Error) => {
+      toast.error('Failed to save settings', { description: err.message })
     },
   })
 
@@ -91,6 +97,15 @@ export default function SettingsPage() {
       <div className="space-y-4 max-w-2xl">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+        <p className="text-sm font-medium text-destructive">Failed to load settings</p>
+        <p className="text-xs text-muted-foreground">{(error as Error).message}</p>
       </div>
     )
   }

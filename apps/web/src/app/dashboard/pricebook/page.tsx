@@ -13,6 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PricebookForm } from '@/components/pricebook-form'
 import { formatMoney, formatMoneyRange } from '@/lib/utils'
+import { safeFetch } from '@/lib/safe-fetch'
+import { toast } from 'sonner'
 import type { PricebookItem, PricebookItemInput } from '@kova/shared'
 
 const TOTAL_OPPORTUNITY_TYPES = 11
@@ -22,9 +24,9 @@ export default function PricebookPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editItem, setEditItem] = useState<PricebookItem | null>(null)
 
-  const { data: items, isLoading } = useQuery<PricebookItem[]>({
+  const { data: items, isLoading, isError, error } = useQuery<PricebookItem[]>({
     queryKey: ['pricebook'],
-    queryFn: () => fetch('/api/pricebook').then((r) => r.json()),
+    queryFn: () => safeFetch<PricebookItem[]>('/api/pricebook'),
   })
 
   const createMutation = useMutation({
@@ -35,8 +37,12 @@ export default function PricebookPage() {
         body: JSON.stringify(data),
       }).then((r) => r.json()),
     onSuccess: () => {
+      toast.success('Item added')
       queryClient.invalidateQueries({ queryKey: ['pricebook'] })
       setFormOpen(false)
+    },
+    onError: (err: Error) => {
+      toast.error('Failed to add item', { description: err.message })
     },
   })
 
@@ -48,8 +54,12 @@ export default function PricebookPage() {
         body: JSON.stringify(data),
       }).then((r) => r.json()),
     onSuccess: () => {
+      toast.success('Item updated')
       queryClient.invalidateQueries({ queryKey: ['pricebook'] })
       setEditItem(null)
+    },
+    onError: (err: Error) => {
+      toast.error('Failed to update item', { description: err.message })
     },
   })
 
@@ -57,7 +67,11 @@ export default function PricebookPage() {
     mutationFn: (id: string) =>
       fetch(`/api/pricebook/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
+      toast.success('Item removed')
       queryClient.invalidateQueries({ queryKey: ['pricebook'] })
+    },
+    onError: (err: Error) => {
+      toast.error('Failed to remove item', { description: err.message })
     },
   })
 
@@ -81,6 +95,15 @@ export default function PricebookPage() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+        <p className="text-sm font-medium text-destructive">Failed to load pricebook</p>
+        <p className="text-xs text-muted-foreground">{(error as Error).message}</p>
       </div>
     )
   }

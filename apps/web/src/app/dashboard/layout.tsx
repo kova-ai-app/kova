@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { UserButton } from '@clerk/nextjs'
 import { LayoutDashboard, Phone, DollarSign, Settings } from 'lucide-react'
+import { Toaster } from '@/components/ui/sonner'
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -40,6 +41,7 @@ export default function DashboardLayout({
         </div>
       </aside>
       <main className="flex-1 overflow-auto p-8">{children}</main>
+      <Toaster />
     </div>
   )
 }

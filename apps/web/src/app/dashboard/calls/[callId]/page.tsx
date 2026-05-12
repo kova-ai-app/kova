@@ -32,6 +32,8 @@ import {
 import { AudioPlayer } from '@/components/audio-player'
 import { TranscriptViewer } from '@/components/transcript-viewer'
 import { formatMoneyRange, formatDuration } from '@/lib/utils'
+import { safeFetch } from '@/lib/safe-fetch'
+import { toast } from 'sonner'
 import type {
   Call,
   Score,
@@ -66,14 +68,14 @@ export default function CallDetailPage() {
   const [disputeOppId, setDisputeOppId] = useState<string | null>(null)
   const [disputeReason, setDisputeReason] = useState('')
 
-  const { data, isLoading } = useQuery<CallDetailResponse>({
+  const { data, isLoading, isError, error } = useQuery<CallDetailResponse>({
     queryKey: ['call', callId],
-    queryFn: () => fetch(`/api/calls/${callId}`).then((r) => r.json()),
+    queryFn: () => safeFetch<CallDetailResponse>(`/api/calls/${callId}`),
   })
 
   const { data: audioData } = useQuery<{ url: string; expiresInSec: number }>({
     queryKey: ['callAudio', callId],
-    queryFn: () => fetch(`/api/calls/${callId}/audio`).then((r) => r.json()),
+    queryFn: () => safeFetch<{ url: string; expiresInSec: number }>(`/api/calls/${callId}/audio`),
     enabled: !!data?.call?.s3Key,
   })
 
@@ -85,9 +87,13 @@ export default function CallDetailPage() {
         body: JSON.stringify({ reason }),
       }),
     onSuccess: () => {
+      toast.success('Dispute submitted')
       queryClient.invalidateQueries({ queryKey: ['call', callId] })
       setDisputeOppId(null)
       setDisputeReason('')
+    },
+    onError: (err: Error) => {
+      toast.error('Failed to submit dispute', { description: err.message })
     },
   })
 
@@ -99,8 +105,12 @@ export default function CallDetailPage() {
         body: JSON.stringify({ text }),
       }),
     onSuccess: () => {
+      toast.success('Coaching note added')
       queryClient.invalidateQueries({ queryKey: ['call', callId] })
       setCoachingText('')
+    },
+    onError: (err: Error) => {
+      toast.error('Failed to add coaching note', { description: err.message })
     },
   })
 
@@ -112,7 +122,11 @@ export default function CallDetailPage() {
         body: JSON.stringify({}),
       }),
     onSuccess: () => {
+      toast.success('Marked as reviewed')
       queryClient.invalidateQueries({ queryKey: ['call', callId] })
+    },
+    onError: (err: Error) => {
+      toast.error('Failed to mark as reviewed', { description: err.message })
     },
   })
 
@@ -123,6 +137,15 @@ export default function CallDetailPage() {
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+        <p className="text-sm font-medium text-destructive">Failed to load call</p>
+        <p className="text-xs text-muted-foreground">{(error as Error).message}</p>
       </div>
     )
   }

@@ -20,6 +20,7 @@ import {
   formatDuration,
   formatRelativeTime,
 } from '@/lib/utils'
+import { safeFetch } from '@/lib/safe-fetch'
 import type { CallSummary, PaginatedResponse } from '@kova/shared'
 
 export default function CallLibraryPage() {
@@ -38,14 +39,14 @@ export default function CallLibraryPage() {
   if (dateFrom) params.set('dateFrom', dateFrom)
   if (dateTo) params.set('dateTo', dateTo)
 
-  const { data, isLoading } = useQuery<PaginatedResponse<CallSummary>>({
+  const { data, isLoading, isError, error } = useQuery<PaginatedResponse<CallSummary>>({
     queryKey: ['calls', page, techId, jobType, status, dateFrom, dateTo],
-    queryFn: () => fetch(`/api/calls?${params}`).then((r) => r.json()),
+    queryFn: () => safeFetch<PaginatedResponse<CallSummary>>(`/api/calls?${params}`),
   })
 
   const { data: techs } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['techs'],
-    queryFn: () => fetch('/api/techs').then((r) => r.json()),
+    queryFn: () => safeFetch<Array<{ id: string; name: string }>>('/api/techs'),
   })
 
   const resetFilters = () => {
@@ -154,6 +155,11 @@ export default function CallLibraryPage() {
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-14 w-full" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
+          <p className="text-sm font-medium text-destructive">Failed to load calls</p>
+          <p className="text-xs text-muted-foreground">{(error as Error).message}</p>
         </div>
       ) : data?.data.length === 0 ? (
         <Card>
