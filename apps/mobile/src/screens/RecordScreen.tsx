@@ -9,8 +9,11 @@ import {
   Animated,
 } from 'react-native'
 import DeviceInfo from 'react-native-device-info'
+import { useAuth, useOrganization } from '@clerk/clerk-expo'
 import { useRecordingStore } from '../stores/recording-store'
 import ConsentModal from '../components/ConsentModal'
+
+const IS_CLERK_CONFIGURED = !!process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 export default function RecordScreen() {
   const {
@@ -59,12 +62,18 @@ export default function RecordScreen() {
     }
   }, [status])
 
+  const { userId } = IS_CLERK_CONFIGURED ? useAuth() : { userId: 'dev-tech-1' }
+  const { organization } = IS_CLERK_CONFIGURED
+    ? useOrganization()
+    : { organization: { id: 'dev-org-1' } }
+
   const handlePressRecord = async () => {
+    if (!userId || !organization?.id) {
+      Alert.alert('Not signed in', 'Please sign in before recording.')
+      return
+    }
     try {
-      await startRecording({
-        techId: 'tech-placeholder', // replaced with real Clerk userId in Task 10
-        companyId: 'co-placeholder',
-      })
+      await startRecording({ techId: userId, companyId: organization.id })
     } catch (e: any) {
       if (e.message === 'Recording already active') {
         Alert.alert('Recording Already Active', 'Stop the current recording before starting a new one.')
