@@ -1,21 +1,34 @@
 import { NextResponse } from 'next/server'
-import { db, opportunities } from '@kova/db'
-import { eq } from 'drizzle-orm'
-import { requireRole } from '@/lib/auth'
+import { db, opportunities, scores, calls } from '@kova/db'
+import { eq, and } from 'drizzle-orm'
+import { getAuthWithCompany } from '@/lib/auth'
+import { withErrorHandler } from '@/lib/api-handler'
 
-export async function POST(
+export const POST = withErrorHandler(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   // Only owners and managers may dispute opportunities
-  const authResult = await requireRole(['owner', 'manager'])
-  if (authResult instanceof NextResponse) return authResult
+  const { auth, error } = await getAuthWithCompany(['owner', 'manager'])
+  if (error) return error
 
   const { id } = await params
   const body = (await request.json()) as { reason?: string }
 
   if (!body.reason?.trim()) {
     return NextResponse.json({ error: 'reason is required' }, { status: 400 })
+  }
+
+  // Verify opportunity belongs to this company (opportunities → scores → calls)
+  const [opp] = await db
+    .select({ id: opportunities.id })
+    .from(opportunities)
+    .innerJoin(scores, eq(opportunities.scoreId, scores.id))
+    .innerJoin(calls, eq(scores.callId, calls.id))
+    .where(and(eq(opportunities.id, id), eq(calls.companyId, auth.companyId)))
+
+  if (!opp) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
   await db
@@ -27,4 +40,4 @@ export async function POST(
     .where(eq(opportunities.id, id))
 
   return NextResponse.json({ disputed: true })
-}
+})

@@ -15,7 +15,7 @@ import { withErrorHandler } from '@/lib/api-handler'
 
 describe('withErrorHandler', () => {
   it('returns 500 with structured error when handler throws', async () => {
-    const handler = withErrorHandler(async () => {
+    const handler = withErrorHandler(async (_req: Request, _ctx: unknown): Promise<NextResponse> => {
       throw new Error('DB connection lost')
     })
 
@@ -28,7 +28,7 @@ describe('withErrorHandler', () => {
   })
 
   it('passes through normal responses unchanged', async () => {
-    const handler = withErrorHandler(async () => {
+    const handler = withErrorHandler(async (_req: Request, _ctx: unknown) => {
       return NextResponse.json({ data: 'hello' })
     })
 

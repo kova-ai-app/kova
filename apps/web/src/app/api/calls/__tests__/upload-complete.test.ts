@@ -4,7 +4,7 @@ vi.mock('@clerk/nextjs/server', () => ({
   auth: vi.fn().mockResolvedValue({ userId: 'user-1', orgId: 'org-1' }),
 }))
 vi.mock('@kova/db', () => ({ db: { select: vi.fn(), update: vi.fn() }, calls: {}, companies: {}, users: {} }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
+vi.mock('drizzle-orm', () => ({ eq: vi.fn(), and: vi.fn() }))
 vi.mock('bullmq', () => ({
   Queue: vi.fn().mockImplementation(() => ({
     add: vi.fn().mockResolvedValue({ id: 'job-1' }),

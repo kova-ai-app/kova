@@ -2,23 +2,24 @@ import { NextResponse } from 'next/server'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { db, calls } from '@kova/db'
-import { eq } from 'drizzle-orm'
-import { requireRole } from '@/lib/auth'
+import { eq, and } from 'drizzle-orm'
+import { getAuthWithCompany } from '@/lib/auth'
+import { withErrorHandler } from '@/lib/api-handler'
 import { getS3Client, S3_BUCKET } from '@/lib/s3'
 
-export async function GET(
+export const GET = withErrorHandler(async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
-  const authResult = await requireRole(['owner', 'manager', 'technician'])
-  if (authResult instanceof NextResponse) return authResult
+) => {
+  const { auth, error } = await getAuthWithCompany(['owner', 'manager', 'technician'])
+  if (error) return error
 
   const { id } = await params
 
   const [call] = await db
     .select({ s3Key: calls.s3Key })
     .from(calls)
-    .where(eq(calls.id, id))
+    .where(and(eq(calls.id, id), eq(calls.companyId, auth.companyId)))
 
   if (!call) {
     return NextResponse.json({ error: 'Call not found' }, { status: 404 })
@@ -36,4 +37,4 @@ export async function GET(
   const url = await getSignedUrl(getS3Client(), command, { expiresIn: 3600 })
 
   return NextResponse.json({ url, expiresInSec: 3600 })
-}
+})

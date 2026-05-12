@@ -1,16 +1,28 @@
 import { NextResponse } from 'next/server'
 import { db, pricebookItems } from '@kova/db'
-import { eq } from 'drizzle-orm'
-import { requireRole } from '@/lib/auth'
+import { eq, and } from 'drizzle-orm'
+import { getAuthWithCompany } from '@/lib/auth'
+import { withErrorHandler } from '@/lib/api-handler'
 
-export async function PUT(
+export const PUT = withErrorHandler(async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
-  const authResult = await requireRole(['owner'])
-  if (authResult instanceof NextResponse) return authResult
+) => {
+  const { auth, error } = await getAuthWithCompany(['owner'])
+  if (error) return error
 
   const { id } = await params
+
+  // Verify item belongs to this company before updating
+  const [item] = await db
+    .select({ id: pricebookItems.id })
+    .from(pricebookItems)
+    .where(and(eq(pricebookItems.id, id), eq(pricebookItems.companyId, auth.companyId)))
+
+  if (!item) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   const body = await request.json()
 
   const [updated] = await db
@@ -32,21 +44,27 @@ export async function PUT(
     .where(eq(pricebookItems.id, id))
     .returning()
 
-  if (!updated) {
-    return NextResponse.json({ error: 'Item not found' }, { status: 404 })
-  }
-
   return NextResponse.json(updated)
-}
+})
 
-export async function DELETE(
+export const DELETE = withErrorHandler(async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
-  const authResult = await requireRole(['owner'])
-  if (authResult instanceof NextResponse) return authResult
+) => {
+  const { auth, error } = await getAuthWithCompany(['owner'])
+  if (error) return error
 
   const { id } = await params
+
+  // Verify item belongs to this company before deleting
+  const [item] = await db
+    .select({ id: pricebookItems.id })
+    .from(pricebookItems)
+    .where(and(eq(pricebookItems.id, id), eq(pricebookItems.companyId, auth.companyId)))
+
+  if (!item) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   await db
     .update(pricebookItems)
@@ -54,4 +72,4 @@ export async function DELETE(
     .where(eq(pricebookItems.id, id))
 
   return new NextResponse(null, { status: 204 })
-}
+})

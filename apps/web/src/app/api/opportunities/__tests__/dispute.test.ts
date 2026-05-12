@@ -2,14 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/auth', () => ({
   requireRole: vi.fn(),
+  getAuthWithCompany: vi.fn(),
 }))
 vi.mock('@kova/db', () => ({
-  db: { update: vi.fn() },
+  db: { select: vi.fn(), update: vi.fn() },
   opportunities: {},
+  scores: {},
+  calls: {},
 }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
+vi.mock('drizzle-orm', () => ({ eq: vi.fn(), and: vi.fn() }))
 
-import { requireRole } from '@/lib/auth'
+import { getAuthWithCompany } from '@/lib/auth'
 import { db } from '@kova/db'
 import { POST } from '../[id]/dispute/route'
 import { NextResponse } from 'next/server'
@@ -27,7 +30,6 @@ function makeRequest(body: object) {
 describe('POST /api/opportunities/:id/dispute', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(requireRole as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(MANAGER_CTX)
     ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
@@ -36,6 +38,21 @@ describe('POST /api/opportunities/:id/dispute', () => {
   })
 
   it('1. manager can dispute an opportunity — returns 200', async () => {
+    ;(getAuthWithCompany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: { ...MANAGER_CTX, companyId: 'co-1' },
+      error: null,
+    })
+    // Ownership check via two innerJoins (opportunities → scores → calls)
+    ;(db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        innerJoin: vi.fn().mockReturnValue({
+          innerJoin: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([{ id: 'opp-1' }]),
+          }),
+        }),
+      }),
+    })
+
     const req = makeRequest({ reason: 'Customer confirmed they did request this service' })
     const res = await POST(req, { params: Promise.resolve({ id: 'opp-1' }) })
     expect(res.status).toBe(200)
@@ -44,9 +61,10 @@ describe('POST /api/opportunities/:id/dispute', () => {
   })
 
   it('2. technician is forbidden — returns 403', async () => {
-    ;(requireRole as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
-      NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    )
+    ;(getAuthWithCompany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: null,
+      error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
+    })
     const req = makeRequest({ reason: 'some reason' })
     const res = await POST(req, { params: Promise.resolve({ id: 'opp-1' }) })
     expect(res.status).toBe(403)

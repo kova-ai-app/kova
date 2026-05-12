@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/auth', () => ({
   requireRole: vi.fn(),
+  getAuthWithCompany: vi.fn(),
 }))
 vi.mock('@kova/db', () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
@@ -14,7 +15,7 @@ vi.mock('drizzle-orm', () => ({
   desc: vi.fn(),
 }))
 
-import { requireRole } from '@/lib/auth'
+import { requireRole, getAuthWithCompany } from '@/lib/auth'
 import { db } from '@kova/db'
 import { GET, POST } from '../route'
 import { PUT, DELETE } from '../[id]/route'
@@ -146,7 +147,16 @@ describe('Pricebook API', () => {
 
   // --- PUT /api/pricebook/:id ---
   it('5. PUT updates a pricebook item', async () => {
-    ;(requireRole as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(OWNER_CTX)
+    ;(getAuthWithCompany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: { ...OWNER_CTX, companyId: 'comp-1' },
+      error: null,
+    })
+    // Ownership check returns the item
+    ;(db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([{ id: 'pb-1' }]),
+      }),
+    })
     ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
@@ -169,9 +179,10 @@ describe('Pricebook API', () => {
   })
 
   it('6. PUT returns 401 for unauthenticated', async () => {
-    ;(requireRole as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
-      NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    )
+    ;(getAuthWithCompany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: null,
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    })
 
     const req = new Request('http://localhost/api/pricebook/pb-1', {
       method: 'PUT',
@@ -186,7 +197,16 @@ describe('Pricebook API', () => {
 
   // --- DELETE /api/pricebook/:id ---
   it('7. DELETE soft-deactivates a pricebook item', async () => {
-    ;(requireRole as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(OWNER_CTX)
+    ;(getAuthWithCompany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: { ...OWNER_CTX, companyId: 'comp-1' },
+      error: null,
+    })
+    // Ownership check returns the item
+    ;(db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([{ id: 'pb-1' }]),
+      }),
+    })
     ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([]),
@@ -203,9 +223,10 @@ describe('Pricebook API', () => {
   })
 
   it('8. DELETE returns 401 for unauthenticated', async () => {
-    ;(requireRole as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
-      NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    )
+    ;(getAuthWithCompany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      auth: null,
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    })
 
     const req = new Request('http://localhost/api/pricebook/pb-1', {
       method: 'DELETE',
