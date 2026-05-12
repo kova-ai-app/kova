@@ -80,6 +80,9 @@ export interface Call {
   status: CallStatus
   consentLoggedAt?: string
   declineReason?: string
+  customerName?: string
+  jobType?: JobType
+  notes?: string
 }
 
 export interface CallSummary {
