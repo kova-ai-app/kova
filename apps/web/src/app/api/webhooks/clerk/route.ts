@@ -11,6 +11,11 @@ function clerkRoleToKovaRole(clerkRole: string): UserRole {
 }
 
 export async function POST(request: NextRequest) {
+  if (!process.env.CLERK_WEBHOOK_SECRET) {
+    console.error('[webhook] CLERK_WEBHOOK_SECRET is not configured')
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
+  }
+
   let evt: WebhookEvent
   try {
     evt = await verifyWebhook(request)
@@ -53,7 +58,10 @@ export async function POST(request: NextRequest) {
 
         if (!company) {
           console.warn(`[webhook] company not found for org ${clerkOrgId} — skipping user upsert`)
-          return NextResponse.json({ received: true, warning: 'company not found' })
+          return NextResponse.json(
+            { error: 'company not found — retry later' },
+            { status: 500 }
+          )
         }
 
         await db.insert(users)

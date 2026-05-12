@@ -39,6 +39,7 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   phone: text('phone'),
   languagePref: text('language_pref', { enum: ['en', 'es', 'unknown'] }).notNull().default('en'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
 // ---- calls ------------------------------------------------------------------
