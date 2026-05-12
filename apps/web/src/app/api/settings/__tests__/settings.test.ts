@@ -14,7 +14,6 @@ vi.mock('drizzle-orm', () => ({
 import { requireRole } from '@/lib/auth'
 import { db } from '@kova/db'
 import { GET, PATCH } from '../route'
-import { NextResponse } from 'next/server'
 
 const OWNER_CTX = { clerkUserId: 'user-clerk-1', orgId: 'org-1', role: 'owner' as const }
 
