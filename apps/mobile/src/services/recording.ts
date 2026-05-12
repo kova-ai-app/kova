@@ -32,7 +32,8 @@ export async function requestRecordingPermissions(): Promise<void> {
     // API 34+ requires FOREGROUND_SERVICE_MICROPHONE at runtime
     if (Platform.Version >= 34) {
       const fsmStatus = await PermissionsAndroid.request(
-        'android.permission.FOREGROUND_SERVICE_MICROPHONE'
+        // API 34+ permission not yet in @types/react-native; cast required
+        'android.permission.FOREGROUND_SERVICE_MICROPHONE' as Parameters<typeof PermissionsAndroid.request>[0]
       )
       if (fsmStatus !== 'granted') {
         throw new Error('FOREGROUND_SERVICE_MICROPHONE_DENIED')
