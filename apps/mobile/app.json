@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "Kova",
+    "slug": "kova",
+    "version": "1.0.0",
+    "scheme": "kova",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kovaapp.mobile",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Kova records service calls to help your team improve revenue.",
+        "NSBackgroundModes": ["audio"]
+      },
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.kovaapp.mobile",
+      "permissions": [
+        "RECORD_AUDIO",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "versionCode": 1
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2563EB",
+          "androidMode": "default",
+          "androidCollapsedTitle": "Kova",
+          "iosDisplayInForeground": true
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "kova-mobile",
+          "organization": "kova"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    },
+    "owner": "kova-ai-app"
+  }
+}

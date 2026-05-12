@@ -2,7 +2,7 @@
   "name": "kova",
   "private": true,
   "description": "Kova — Revenue Intelligence for Drain & Plumbing",
-  "packageManager": "pnpm@10.11.0",
+  "packageManager": "pnpm@11.1.0",
   "engines": {
     "node": ">=22"
   },
@@ -14,6 +14,29 @@
     "test": "turbo test",
     "db:generate": "turbo db:generate --filter=@kova/db",
     "db:migrate": "turbo db:migrate --filter=@kova/db",
-    "db:seed": "turbo db:seed --filter=@kova/db"
+    "db:seed": "turbo db:seed --filter=@kova/db",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@clerk/shared",
+      "@sentry/cli",
+      "browser-tabs-lock",
+      "bufferutil",
+      "core-js",
+      "esbuild",
+      "msgpackr-extract",
+      "sharp",
+      "utf-8-validate"
+    ]
   }
 }
