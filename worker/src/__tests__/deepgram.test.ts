@@ -51,19 +51,21 @@ function makeDeepgramResponse(
 }
 
 function getTranscribeFile() {
-  return (createClient as unknown as ReturnType<typeof vi.fn>).mockTranscribeFile as ReturnType<typeof vi.fn>
+  return mockTranscribeFile
 }
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
+let mockTranscribeFile: ReturnType<typeof vi.fn>
+
 describe('transcribeAudio', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env.DEEPGRAM_API_KEY = 'test-key'
     // Create a stable transcribeFile mock and expose it for tests to configure
-    const mockTranscribeFile = vi.fn()
+    mockTranscribeFile = vi.fn()
     ;(createClient as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       listen: {
         prerecorded: {
@@ -71,7 +73,6 @@ describe('transcribeAudio', () => {
         },
       },
     })
-    ;(createClient as unknown as ReturnType<typeof vi.fn>).mockTranscribeFile = mockTranscribeFile
   })
 
   // --- Scenario 1: EN single speaker, short call ---

@@ -1,6 +1,7 @@
 import { createClient } from './lib/redis.js'
 import { createLogger } from './lib/logger.js'
 import { scoringWorker } from './workers/scoring.js'
+import { startBullBoard } from './lib/bull-board.js'
 
 const logger = createLogger('worker')
 
@@ -12,6 +13,9 @@ async function main() {
   // Health check
   await redis.ping()
   logger.info('Redis connected')
+
+  // Start Bull Board HTTP server (port 3001)
+  startBullBoard()
 
   // Start workers
   scoringWorker.on('completed', (job) => {
