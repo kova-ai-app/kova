@@ -6,6 +6,7 @@ import { useAuth } from '@clerk/clerk-expo'
 import TabNavigator from './TabNavigator'
 import SignInScreen from '../screens/SignInScreen'
 import JobTaggingScreen from '../screens/JobTaggingScreen'
+import CallDetailScreen from '../screens/CallDetailScreen'
 import { useRecordingStore } from '../stores/recording-store'
 import type { RootStackParamList } from './types'
 
@@ -44,6 +45,11 @@ function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
           name="JobTagging"
           component={JobTaggingScreen}
           options={{ title: 'Tag This Call' }}
+        />
+        <Stack.Screen
+          name="CallDetail"
+          component={CallDetailScreen}
+          options={{ title: 'Call Detail', headerShown: true }}
         />
       </Stack.Navigator>
     </NavigationContainer>
