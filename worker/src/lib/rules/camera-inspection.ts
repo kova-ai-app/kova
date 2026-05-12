@@ -6,7 +6,7 @@ import type { ScoringRule, RuleContext } from './types.js'
 // ---------------------------------------------------------------------------
 
 const TRIGGER_PHRASES_EN = [
-  'keeps happening', 'keeps coming back', 'again', 'recurring', 'recurrence',
+  'keeps happening', 'keeps coming back', 'same problem again', 'backed up again', 'clogged again', 'recurring', 'recurrence',
   'third time', 'second time', 'every year', 'every few months', 'twice a year',
   'prior service', 'prior visit', 'had someone out', 'been out before',
   'before for this', 'already been here', 'house was built',
@@ -78,18 +78,13 @@ export class CameraInspectionRule implements ScoringRule {
       }
     }
 
-    // If only offer was found (no trigger), still record it
-    if (!triggered && !offered) {
-      return { dimension: this.dimension, triggered: false, offered: false, confidence: 0.95 }
-    }
-
     return {
       dimension: this.dimension,
       triggered,
       offered,
       confidence: 0.95,
-      clipStartSec,
-      clipEndSec,
+      ...(clipStartSec !== undefined && { clipStartSec }),
+      ...(clipEndSec !== undefined && { clipEndSec }),
     }
   }
 }
