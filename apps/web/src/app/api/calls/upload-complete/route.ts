@@ -66,7 +66,12 @@ export async function POST(request: Request) {
   // Enqueue scoring job
   await getScoringQueue().add(
     JOB_NAMES.SCORE_CALL,
-    { callId: body.callId },
+    {
+      callId: body.callId,
+      s3Keys: body.s3Keys,
+      totalDurationSec: body.totalDurationSec,
+      jobType: body.jobMetadata?.jobType,
+    },
     {
       attempts: 3,
       backoff: { type: 'exponential', delay: 5000 },

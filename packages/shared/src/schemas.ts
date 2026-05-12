@@ -121,12 +121,9 @@ export const TeamRoleUpdateSchema = z.object({
 
 export const ScoringJobPayloadSchema = z.object({
   callId: z.string(),
-  companyId: z.string(),
-  techId: z.string(),
   s3Keys: z.array(z.string()).min(1),
   totalDurationSec: z.number().positive(),
   jobType: JobTypeSchema.optional(),
-  language: LanguageSchema.optional(),
   promptVersion: z.string().default('v1'),
 })
 
