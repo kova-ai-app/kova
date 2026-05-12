@@ -2,14 +2,34 @@ import type { RuleResult } from '@kova/shared'
 import type { RuleContext, ScoringRule } from './types.js'
 import { CameraInspectionRule } from './camera-inspection.js'
 import { MaintenancePlanRule } from './maintenance-plan.js'
+import { DrainCleaningUpsellRule } from './drain-cleaning-upsell.js'
+import { HydroJettingRule } from './hydro-jetting.js'
+import { GreaseTrapRule } from './grease-trap.js'
+import { PipeRepairRule } from './pipe-repair.js'
+import { WaterHeaterRule } from './water-heater.js'
+import { FixtureUpgradeRule } from './fixture-upgrade.js'
+import { WaterFiltrationRule } from './water-filtration.js'
+import { PressureRegulatorRule } from './pressure-regulator.js'
+import { WholeHomeRepipingRule } from './whole-home-repiping.js'
 
 // ---------------------------------------------------------------------------
-// Rule registry
+// Rule registry — order does not affect scoring (each rule is independent)
 // ---------------------------------------------------------------------------
 
 const RULES: ScoringRule[] = [
+  // Drain rules
   new CameraInspectionRule(),
   new MaintenancePlanRule(),
+  new DrainCleaningUpsellRule(),
+  new HydroJettingRule(),
+  new GreaseTrapRule(),
+  new PipeRepairRule(),
+  // Plumbing rules
+  new WaterHeaterRule(),
+  new FixtureUpgradeRule(),
+  new WaterFiltrationRule(),
+  new PressureRegulatorRule(),
+  new WholeHomeRepipingRule(),
 ]
 
 // ---------------------------------------------------------------------------

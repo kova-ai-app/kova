@@ -8,7 +8,7 @@ function seg(speaker: string, text: string, startSec = 0, endSec = 5): Transcrip
 }
 
 describe('runRules', () => {
-  it('returns results for both rules on a standard drain call', () => {
+  it('returns results for all 6 applicable drain rules on a standard drain call', () => {
     const ctx: RuleContext = {
       segments: [
         seg('speaker_1', 'This keeps happening every year', 0, 4),
@@ -20,7 +20,8 @@ describe('runRules', () => {
       language: 'en',
     }
     const results = runRules(ctx)
-    expect(results).toHaveLength(2)
+    // 6 drain rules apply; 5 plumbing rules return null for jobType='drain'
+    expect(results).toHaveLength(6)
     const camera = results.find((r) => r.dimension === 'camera_inspection')
     const plan = results.find((r) => r.dimension === 'preventive_plan')
     expect(camera?.triggered).toBe(true)
@@ -29,7 +30,7 @@ describe('runRules', () => {
     expect(plan?.offered).toBe(true)
   })
 
-  it('returns null-filtered results for plumbing (both rules return null)', () => {
+  it('returns results for all 5 applicable plumbing rules on a plumbing call (drain rules return null)', () => {
     const ctx: RuleContext = {
       segments: [seg('speaker_1', 'The water heater is old')],
       jobType: 'plumbing',
@@ -37,7 +38,10 @@ describe('runRules', () => {
       language: 'en',
     }
     const results = runRules(ctx)
-    expect(results).toHaveLength(0)
+    // 5 plumbing rules apply; 6 drain rules return null for jobType='plumbing'
+    expect(results).toHaveLength(5)
+    expect(results.every((r) => r.dimension !== 'camera_inspection')).toBe(true)
+    expect(results.every((r) => r.dimension !== 'preventive_plan')).toBe(true)
   })
 
   it('applies emergency suppression — all results marked suppressedReason=emergency', () => {
