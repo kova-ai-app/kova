@@ -23,6 +23,7 @@ export const companies = pgTable('companies', {
   name: text('name').notNull(),
   plan: text('plan').notNull().default('pilot'),
   state: text('state').notNull().default('CA'),
+  clerkOrgId: text('clerk_org_id').unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
