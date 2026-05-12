@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq'
 import { v4 as uuidv4 } from 'uuid'
 import { QUEUE_NAMES, JOB_NAMES, ScoringJobPayloadSchema } from '@kova/shared'
-import { db, calls, transcripts, processingCosts, scores, opportunities } from '@kova/db'
+import { db, calls, transcripts, processingCosts, scores, opportunities, coachingPoints } from '@kova/db'
 import { eq } from 'drizzle-orm'
 import { sendCallScoredNotification } from '../lib/push.js'
 import { getRedisClient } from '../lib/redis.js'
@@ -35,6 +35,7 @@ export async function processTranscription(payload: {
     .select({
       id: calls.id,
       companyId: calls.companyId,
+      techId: calls.techId,
       language: calls.language,
       durationSec: calls.durationSec,
       jobType: calls.jobType,
@@ -155,6 +156,26 @@ export async function processTranscription(payload: {
       })
     }
 
+    // Step 12b: Auto-generate coaching points from low LLM scores (0 or 1)
+    if (llmAnalysis) {
+      const QUAL_DIM_LABELS: Record<string, string> = {
+        diagnosis_quality: 'Diagnosis Quality',
+        hydrojet_presentation: 'Hydrojet Presentation',
+        customer_education: 'Customer Education',
+        close_quality: 'Close Quality',
+      }
+
+      for (const qs of llmAnalysis.qualScores) {
+        if (qs.score <= 1) {
+          await db.insert(coachingPoints).values({
+            callId,
+            techId: call.techId,
+            text: `${QUAL_DIM_LABELS[qs.dimension] ?? qs.dimension}: ${qs.reasoning}`,
+          })
+        }
+      }
+    }
+
     // Step 13: Mark call as scored, link transcript + score
     await db
       .update(calls)
@@ -168,13 +189,7 @@ export async function processTranscription(payload: {
 
     // Send push notification to the technician (non-fatal)
     try {
-      const [callRecord] = await db
-        .select({ techId: calls.techId })
-        .from(calls)
-        .where(eq(calls.id, callId))
-      if (callRecord?.techId) {
-        await sendCallScoredNotification(callId, callRecord.techId)
-      }
+      await sendCallScoredNotification(callId, call.techId)
     } catch (err) {
       logger.warn({ err, callId }, 'Push notification failed — non-fatal')
     }

@@ -7,6 +7,7 @@ vi.mock('@kova/db', () => ({
   processingCosts: {},
   scores: {},
   opportunities: {},
+  coachingPoints: {},
   pricebookItems: {},
 }))
 vi.mock('drizzle-orm', () => ({ eq: vi.fn(), and: vi.fn() }))
@@ -131,8 +132,8 @@ describe('processTranscription', () => {
       MOCK_LLM_ANALYSIS,
       expect.any(Map),
     )
-    // inserts: transcript + deepgram cost + openai cost + scores + 1 opportunity = 5
-    expect(db.insert).toHaveBeenCalledTimes(5)
+    // inserts: transcript + deepgram cost + openai cost + scores + 1 opportunity + 1 coaching point = 6
+    expect(db.insert).toHaveBeenCalledTimes(6)
   })
 
   it('scores row written with assembleScore values (overallScore=67)', async () => {
@@ -198,5 +199,45 @@ describe('processTranscription', () => {
       totalDurationSec: 600,
     })
     expect(sendCallScoredNotification).toHaveBeenCalled()
+  })
+
+  it('generates coaching points from low-scoring LLM dimensions (score 0 or 1)', async () => {
+    const llmWithLowScores = {
+      qualScores: [
+        { dimension: 'diagnosis_quality',     score: 0, reasoning: 'Did not explain root cause to customer' },
+        { dimension: 'hydrojet_presentation', score: 1, reasoning: 'Briefly mentioned jetting but did not present as option' },
+        { dimension: 'customer_education',    score: 2, reasoning: 'Good education before pricing' },
+        { dimension: 'close_quality',         score: 3, reasoning: 'Excellent close with options' },
+      ],
+      tokensIn: 800,
+      tokensOut: 200,
+      costUsd: 0.0004,
+    }
+    ;(analyzeTranscript as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(llmWithLowScores)
+
+    const insertedValues: Array<Record<string, unknown>> = []
+    ;(db.insert as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+      values: vi.fn().mockImplementation((vals: Record<string, unknown>) => {
+        insertedValues.push(vals)
+        return { returning: vi.fn().mockResolvedValue([{ id: 'row-1' }]) }
+      }),
+    }))
+
+    await processTranscription({
+      callId: 'call-1',
+      s3Keys: ['audio/co-1/sess-1/chunk_0.aac'],
+      totalDurationSec: 600,
+    })
+
+    // Find coaching point inserts — they have a `text` field containing dimension label + reasoning
+    const coachingInserts = insertedValues.filter(
+      (v) => typeof v.text === 'string' && v.callId === 'call-1' && v.techId === 'tech-1'
+    )
+    // 2 low-scoring dimensions (score 0 and 1) → 2 coaching points
+    expect(coachingInserts).toHaveLength(2)
+    expect(coachingInserts[0].text).toContain('Diagnosis Quality')
+    expect(coachingInserts[0].text).toContain('Did not explain root cause')
+    expect(coachingInserts[1].text).toContain('Hydrojet Presentation')
+    expect(coachingInserts[1].text).toContain('Briefly mentioned jetting')
   })
 })
