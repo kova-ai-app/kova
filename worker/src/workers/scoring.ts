@@ -8,7 +8,12 @@ import { createLogger } from '../lib/logger.js'
 import { downloadChunks } from '../lib/s3.js'
 import { transcribeAudio } from '../lib/deepgram.js'
 import { runRules } from '../lib/rules/index.js'
-import type { Language, JobType } from '@kova/shared'
+import { analyzeTranscript } from '../lib/llm.js'
+import { lookupPrice } from '../lib/pricebook.js'
+import { assembleScore } from '../lib/score-assembly.js'
+import type { Language, JobType, ScoringDimension } from '@kova/shared'
+import type { PriceResult } from '../lib/pricebook.js'
+import type { LLMAnalysis } from '../lib/llm.js'
 
 const logger = createLogger('scoring-worker')
 
@@ -24,10 +29,11 @@ export async function processTranscription(payload: {
 }): Promise<void> {
   const { callId, s3Keys } = payload
 
-  // Step 1: Fetch call from DB to get language hint and jobType
+  // Step 1: Fetch call from DB
   const [call] = await db
     .select({
       id: calls.id,
+      companyId: calls.companyId,
       language: calls.language,
       durationSec: calls.durationSec,
       jobType: calls.jobType,
@@ -77,56 +83,86 @@ export async function processTranscription(payload: {
 
     // Step 7: Run rules engine
     logger.info({ callId }, 'Running rules engine')
+    const callJobType = (call.jobType ?? payload.jobType ?? null) as JobType | null
     const ruleResults = runRules({
       segments: transcription.segments,
-      jobType: (call.jobType ?? payload.jobType ?? null) as JobType | null,
+      jobType: callJobType,
       durationSec: transcription.durationSec ?? payload.totalDurationSec,
       language: transcription.language,
     })
     logger.info({ callId, ruleCount: ruleResults.length }, 'Rules evaluated')
 
-    // Step 8: Write scores row (rules-only pass; LLM overwrites in Week 6)
+    // Step 8: Look up prices for each rule result dimension
+    const priceMap = new Map<string, PriceResult>()
+    for (const rr of ruleResults) {
+      const price = await lookupPrice(call.companyId, rr.dimension as ScoringDimension)
+      priceMap.set(rr.dimension, price)
+    }
+
+    // Step 9: LLM qualitative analysis (non-fatal — falls back to rules-only)
+    let llmAnalysis: LLMAnalysis | null = null
+    try {
+      logger.info({ callId }, 'Running LLM qualitative analysis')
+      llmAnalysis = await analyzeTranscript(transcription.segments, callJobType, transcription.language)
+      await db.insert(processingCosts).values({
+        callId,
+        provider: 'openai',
+        tokensIn: llmAnalysis.tokensIn,
+        tokensOut: llmAnalysis.tokensOut,
+        costUsd: llmAnalysis.costUsd,
+      })
+      logger.info({ callId, tokensIn: llmAnalysis.tokensIn }, 'LLM analysis complete')
+    } catch (err) {
+      logger.warn({ callId, err }, 'LLM analysis failed — falling back to rules-only scoring')
+    }
+
+    // Step 10: Assemble final score
+    const assembled = assembleScore(ruleResults, llmAnalysis, priceMap)
+
+    // Step 11: Write scores row with real values
     const scoreId = uuidv4()
     await db
       .insert(scores)
       .values({
         id: scoreId,
         callId,
-        overallScore: 0,
-        dimensions: [],
-        opportunityTotalLow: 0,
-        opportunityTotalHigh: 0,
-        confidenceLevel: 'high',
-        modelUsed: 'rules-v1',
+        overallScore: assembled.overallScore,
+        dimensions: assembled.dimensions,
+        opportunityTotalLow: assembled.opportunityTotalLow,
+        opportunityTotalHigh: assembled.opportunityTotalHigh,
+        confidenceLevel: assembled.confidenceLevel,
+        modelUsed: assembled.modelUsed,
         promptVersion: 'v1',
       })
       .returning({ id: scores.id })
 
-    // Step 9: Write opportunities rows (one per rule result)
-    for (const rr of ruleResults) {
+    // Step 12: Write opportunities rows with real prices
+    for (const eo of assembled.enrichedOpportunities) {
       await db.insert(opportunities).values({
         scoreId,
-        type: rr.dimension,
-        triggered: rr.triggered,
-        offered: rr.offered,
-        valueLow: 0,
-        valueHigh: 0,
-        isDefaultPrice: true,
-        confidence: rr.confidence,
-        clipStartSec: rr.clipStartSec ?? null,
-        clipEndSec: rr.clipEndSec ?? null,
+        type: eo.dimension,
+        triggered: eo.triggered,
+        offered: eo.offered,
+        pricebookItemId: eo.pricebookItemId ?? undefined,
+        valueLow: eo.valueLow,
+        valueHigh: eo.valueHigh,
+        ltvValue: eo.ltvValue ?? undefined,
+        isDefaultPrice: eo.isDefaultPrice,
+        confidence: eo.confidence,
+        clipStartSec: eo.clipStartSec ?? null,
+        clipEndSec: eo.clipEndSec ?? null,
       })
     }
 
-    // Step 10: Mark call as transcribed → scored, link transcript + score
+    // Step 13: Mark call as scored, link transcript + score
     await db
       .update(calls)
       .set({ status: 'scored', transcriptId, scoreId })
       .where(eq(calls.id, callId))
 
     logger.info(
-      { callId, transcriptId, scoreId, language: transcription.language },
-      'Scoring complete (rules pass)'
+      { callId, transcriptId, scoreId, overallScore: assembled.overallScore, modelUsed: assembled.modelUsed },
+      'Scoring complete'
     )
   } catch (err) {
     await db.update(calls).set({ status: 'failed' }).where(eq(calls.id, callId))
@@ -150,9 +186,6 @@ export const scoringWorker = new Worker(
     logger.info({ callId: payload.callId }, 'Processing scoring job')
 
     await processTranscription(payload)
-
-    // TODO Week 6: LLM scoring + score assembly + pricebook lookup
-    logger.info({ callId: payload.callId }, 'LLM scoring (TODO Week 6)')
 
     // TODO Week 7: Send push notification
     logger.info({ callId: payload.callId }, 'Push notification (TODO Week 7)')
