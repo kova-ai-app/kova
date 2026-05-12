@@ -183,6 +183,19 @@ export interface PricebookItem {
   active: boolean
 }
 
+export interface PricebookItemInput {
+  name: string
+  trade: JobType
+  opportunityType: OpportunityType
+  pricingModel: PricingModel
+  priceFixed?: number | null
+  priceLow?: number | null
+  priceHigh?: number | null
+  isRecurring: boolean
+  ltvAnnual?: number | null
+  ltvYears?: number | null
+}
+
 export interface CoachingPoint {
   id: string
   callId: string
