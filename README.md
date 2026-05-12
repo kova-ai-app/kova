@@ -44,14 +44,15 @@ nvm use
 pnpm install
 
 # 3. Copy env file and fill in values (see External Services below)
-cp .env.example apps/web/.env.local
-cp .env.example worker/.env
+cp .env.example apps/web/.env.local   # Next.js web app
+cp .env.example worker/.env           # Background worker
+cp .env.example apps/mobile/.env      # Expo mobile app (EXPO_PUBLIC_* vars)
 
 # 4. Start development servers
 pnpm dev
 ```
 
-> Web runs at http://localhost:3000. The worker requires Redis to be running (see Railway setup below).
+> Web runs at http://localhost:3000. The worker requires Redis — either provision via Railway (see below) or run locally with Docker: `docker run -d -p 6379:6379 redis:alpine`
 
 ---
 
@@ -71,7 +72,7 @@ pnpm dev
 
 | Script | Description |
 |--------|-------------|
-| `pnpm dev` | Start all dev servers (web + worker) concurrently |
+| `pnpm dev` | Start all dev servers (web, mobile Expo, worker) concurrently |
 | `pnpm build` | Build all packages and apps for production |
 | `pnpm typecheck` | Run TypeScript type checking across the monorepo |
 | `pnpm lint` | Lint all packages with ESLint |
@@ -127,7 +128,7 @@ All variables are documented with descriptions in `.env.example`. Copy it to `ap
 2. New project → region: US East (AWS)
 3. Connection Details → copy "Connection string" (pooled) → `DATABASE_URL`
 4. Connection Details → toggle "Direct connection" → copy → `DATABASE_URL_UNPOOLED`
-5. Branches → Create branches: `staging`, `dev`, `test`
+5. Branches → Create branches: `staging`, `dev`, `test` (each gets its own connection string; use `dev` branch URL for local development, `test` branch URL for CI)
 6. Run initial migration: `pnpm db:migrate`
 
 ### Railway (Redis)
