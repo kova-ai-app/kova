@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import type { UserRole } from '@kova/shared'
+import { db } from '@kova/db'
 
 // ---------------------------------------------------------------------------
 // Maps Clerk organization role slugs to Kova roles
@@ -55,4 +56,38 @@ export async function requireRole(
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+}
+
+export interface AuthWithCompany extends AuthContext {
+  companyId: string
+}
+
+type AuthWithCompanyResult =
+  | { auth: AuthWithCompany; error: null }
+  | { auth: null; error: NextResponse }
+
+/**
+ * Like requireRole(), but also resolves the company from orgId.
+ * Use in routes that need to scope queries to the authenticated company.
+ */
+export async function getAuthWithCompany(
+  allowedRoles: UserRole[]
+): Promise<AuthWithCompanyResult> {
+  const result = await requireRole(allowedRoles)
+  if (result instanceof NextResponse) {
+    return { auth: null, error: result }
+  }
+
+  const company = await db.query.companies.findFirst({
+    where: (c, { eq }) => eq(c.clerkOrgId, result.orgId),
+  })
+
+  if (!company) {
+    return {
+      auth: null,
+      error: NextResponse.json({ error: 'Company not found' }, { status: 404 }),
+    }
+  }
+
+  return { auth: { ...result, companyId: company.id }, error: null }
 }
