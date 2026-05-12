@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { runRules } from '../../lib/rules/index.js'
 import type { RuleContext } from '../../lib/rules/types.js'
+import type { TranscriptSegment } from '@kova/shared'
 
-function seg(speaker: string, text: string, startSec = 0, endSec = 5): import('@kova/shared').TranscriptSegment {
+function seg(speaker: string, text: string, startSec = 0, endSec = 5): TranscriptSegment {
   return { speaker, text, startSec, endSec, language: 'en', confidence: 0.95 }
 }
 

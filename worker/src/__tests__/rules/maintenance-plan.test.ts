@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { MaintenancePlanRule } from '../../lib/rules/maintenance-plan.js'
 import type { RuleContext } from '../../lib/rules/types.js'
+import type { TranscriptSegment } from '@kova/shared'
 
-function seg(speaker: string, text: string, startSec = 0, endSec = 5): import('@kova/shared').TranscriptSegment {
+function seg(speaker: string, text: string, startSec = 0, endSec = 5): TranscriptSegment {
   return { speaker, text, startSec, endSec, language: 'en', confidence: 0.95 }
 }
 
-function ctx(segments: import('@kova/shared').TranscriptSegment[], overrides: Partial<RuleContext> = {}): RuleContext {
+function ctx(segments: TranscriptSegment[], overrides: Partial<RuleContext> = {}): RuleContext {
   return { segments, jobType: 'drain', durationSec: 600, language: 'en', ...overrides }
 }
 
