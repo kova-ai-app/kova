@@ -1,9 +1,11 @@
-import React from 'react'
-import { NavigationContainer } from '@react-navigation/native'
+import React, { useEffect, useRef } from 'react'
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useAuth } from '@clerk/clerk-expo'
 import TabNavigator from './TabNavigator'
 import SignInScreen from '../screens/SignInScreen'
+import JobTaggingScreen from '../screens/JobTaggingScreen'
+import { useRecordingStore } from '../stores/recording-store'
 import type { RootStackParamList } from './types'
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
@@ -18,14 +20,30 @@ function AuthenticatedRoot() {
 }
 
 function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
+  const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null)
+  const status = useRecordingStore((s) => s.status)
+  const sessionId = useRecordingStore((s) => s.sessionId)
+  const callId = useRecordingStore((s) => s.callId)
+
+  useEffect(() => {
+    if (status === 'stopped' && sessionId && callId && navRef.current) {
+      navRef.current.navigate('JobTagging', { sessionId, callId })
+    }
+  }, [status, sessionId, callId])
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isSignedIn ? (
           <Stack.Screen name="Main" component={TabNavigator} />
         ) : (
           <Stack.Screen name="SignIn" component={SignInScreen} />
         )}
+        <Stack.Screen
+          name="JobTagging"
+          component={JobTaggingScreen}
+          options={{ title: 'Tag This Call' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   )

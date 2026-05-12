@@ -1,9 +1,7 @@
-// Navigation type definitions
-// Matches the navigator structure in RootNavigator + TabNavigator
-
 export type RootStackParamList = {
   Main: undefined
   SignIn: undefined
+  JobTagging: { sessionId: string; callId: string }
 }
 
 export type TabParamList = {
