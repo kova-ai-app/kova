@@ -47,7 +47,7 @@ describe('GET /api/calls/upload-url', () => {
     process.env.AWS_SECRET_ACCESS_KEY = 'test-secret'
 
     // Re-apply auth mock after clearAllMocks
-    ;(auth as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ;(auth as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       userId: 'user-1',
       orgId: 'org-1',
     })
@@ -81,7 +81,7 @@ describe('GET /api/calls/upload-url', () => {
   })
 
   it('returns 401 when not authenticated', async () => {
-    ;(auth as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ userId: null, orgId: null })
+    ;(auth as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ userId: null, orgId: null })
     const req = makeRequest({ sessionId: 'sess-1', chunkIndex: '0', contentType: 'audio/aac' })
     const res = await GET(req)
     expect(res.status).toBe(401)
