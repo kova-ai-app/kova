@@ -90,7 +90,7 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
       await startRecorder(sessionId)
     } catch (err: any) {
       // Clean up orphaned session since recorder never started
-      try { deleteSession(sessionId) } catch {}
+      try { deleteSession(sessionId) } catch { /* ignore — session may not exist */ }
       set({ status: 'idle', sessionId: null, callId: null, error: err?.message ?? 'Recording failed to start' })
     }
   },
@@ -128,7 +128,7 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
       set({ status: 'stopped' })
     } catch (err: any) {
       // Best-effort: transition to stopped state even if recorder failed
-      try { setSessionStopped(sessionId) } catch {}
+      try { setSessionStopped(sessionId) } catch { /* ignore — session may not exist */ }
       set({ status: 'stopped', error: err?.message ?? 'Stop failed' })
     }
   },
