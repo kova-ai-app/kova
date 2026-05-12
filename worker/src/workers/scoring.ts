@@ -80,7 +80,7 @@ export async function processTranscription(payload: {
     const ruleResults = runRules({
       segments: transcription.segments,
       jobType: (call.jobType ?? payload.jobType ?? null) as JobType | null,
-      durationSec: transcription.durationSec || payload.totalDurationSec,
+      durationSec: transcription.durationSec ?? payload.totalDurationSec,
       language: transcription.language,
     })
     logger.info({ callId, ruleCount: ruleResults.length }, 'Rules evaluated')
