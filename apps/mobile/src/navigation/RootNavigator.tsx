@@ -7,24 +7,17 @@ import SignInScreen from '../screens/SignInScreen'
 import type { RootStackParamList } from './types'
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
+const IS_CLERK_CONFIGURED = !!process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
 
-export default function RootNavigator() {
-  // When Clerk is not configured (Week 1 scaffold), default to signed-in view
-  let isSignedIn = false
-  let isLoaded = true
-
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const auth = useAuth()
-    isSignedIn = auth.isSignedIn ?? false
-    isLoaded = auth.isLoaded
-  } catch {
-    // ClerkProvider not present — proceed as signed in for scaffold
-    isSignedIn = true
-  }
-
+// Renders the correct screen based on sign-in state. Must be a child of
+// ClerkProvider so useAuth() is always called unconditionally.
+function AuthenticatedRoot() {
+  const { isSignedIn, isLoaded } = useAuth()
   if (!isLoaded) return null
+  return <StackNav isSignedIn={isSignedIn ?? false} />
+}
 
+function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -36,4 +29,12 @@ export default function RootNavigator() {
       </Stack.Navigator>
     </NavigationContainer>
   )
+}
+
+export default function RootNavigator() {
+  // When Clerk is not configured (scaffold), skip auth and go straight to app
+  if (!IS_CLERK_CONFIGURED) {
+    return <StackNav isSignedIn={true} />
+  }
+  return <AuthenticatedRoot />
 }

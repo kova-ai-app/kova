@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { verifyWebhook } from '@clerk/nextjs/webhooks'
 import type { WebhookEvent } from '@clerk/nextjs/webhooks'
 import { db, companies, users } from '@kova/db'

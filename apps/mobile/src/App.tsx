@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react'
-import { ClerkProvider, useAuth } from '@clerk/clerk-expo'
+import React from 'react'
+import { ClerkProvider } from '@clerk/clerk-expo'
 import * as SecureStore from 'expo-secure-store'
 import { StatusBar } from 'expo-status-bar'
 import * as Sentry from '@sentry/react-native'
