@@ -1,13 +1,14 @@
 import { Worker } from 'bullmq'
 import { v4 as uuidv4 } from 'uuid'
 import { QUEUE_NAMES, JOB_NAMES, ScoringJobPayloadSchema } from '@kova/shared'
-import { db, calls, transcripts, processingCosts } from '@kova/db'
+import { db, calls, transcripts, processingCosts, scores, opportunities } from '@kova/db'
 import { eq } from 'drizzle-orm'
 import { getRedisClient } from '../lib/redis.js'
 import { createLogger } from '../lib/logger.js'
 import { downloadChunks } from '../lib/s3.js'
 import { transcribeAudio } from '../lib/deepgram.js'
-import type { Language } from '@kova/shared'
+import { runRules } from '../lib/rules/index.js'
+import type { Language, JobType } from '@kova/shared'
 
 const logger = createLogger('scoring-worker')
 
@@ -23,9 +24,14 @@ export async function processTranscription(payload: {
 }): Promise<void> {
   const { callId, s3Keys } = payload
 
-  // Step 1: Fetch call from DB to get language hint
+  // Step 1: Fetch call from DB to get language hint and jobType
   const [call] = await db
-    .select({ id: calls.id, language: calls.language, durationSec: calls.durationSec })
+    .select({
+      id: calls.id,
+      language: calls.language,
+      durationSec: calls.durationSec,
+      jobType: calls.jobType,
+    })
     .from(calls)
     .where(eq(calls.id, callId))
 
@@ -60,7 +66,7 @@ export async function processTranscription(payload: {
       })
       .returning({ id: transcripts.id })
 
-    // Step 6: Write processing cost record
+    // Step 6: Write transcription processing cost
     await db.insert(processingCosts).values({
       callId,
       provider: 'deepgram',
@@ -69,18 +75,60 @@ export async function processTranscription(payload: {
       costUsd: transcription.costUsd,
     })
 
-    // Step 7: Mark call as transcribed
+    // Step 7: Run rules engine
+    logger.info({ callId }, 'Running rules engine')
+    const ruleResults = runRules({
+      segments: transcription.segments,
+      jobType: (call.jobType ?? payload.jobType ?? null) as JobType | null,
+      durationSec: transcription.durationSec || payload.totalDurationSec,
+      language: transcription.language,
+    })
+    logger.info({ callId, ruleCount: ruleResults.length }, 'Rules evaluated')
+
+    // Step 8: Write scores row (rules-only pass; LLM overwrites in Week 6)
+    const scoreId = uuidv4()
+    await db
+      .insert(scores)
+      .values({
+        id: scoreId,
+        callId,
+        overallScore: 0,
+        dimensions: [],
+        opportunityTotalLow: 0,
+        opportunityTotalHigh: 0,
+        confidenceLevel: 'high',
+        modelUsed: 'rules-v1',
+        promptVersion: 'v1',
+      })
+      .returning({ id: scores.id })
+
+    // Step 9: Write opportunities rows (one per rule result)
+    for (const rr of ruleResults) {
+      await db.insert(opportunities).values({
+        scoreId,
+        type: rr.dimension,
+        triggered: rr.triggered,
+        offered: rr.offered,
+        valueLow: 0,
+        valueHigh: 0,
+        isDefaultPrice: true,
+        confidence: rr.confidence,
+        clipStartSec: rr.clipStartSec ?? null,
+        clipEndSec: rr.clipEndSec ?? null,
+      })
+    }
+
+    // Step 10: Mark call as transcribed → scored, link transcript + score
     await db
       .update(calls)
-      .set({ status: 'transcribed', transcriptId })
+      .set({ status: 'scored', transcriptId, scoreId })
       .where(eq(calls.id, callId))
 
     logger.info(
-      { callId, transcriptId, language: transcription.language },
-      'Transcription complete'
+      { callId, transcriptId, scoreId, language: transcription.language },
+      'Scoring complete (rules pass)'
     )
   } catch (err) {
-    // Mark failed so the worker can surface the error
     await db.update(calls).set({ status: 'failed' }).where(eq(calls.id, callId))
     throw err
   }
@@ -103,16 +151,13 @@ export const scoringWorker = new Worker(
 
     await processTranscription(payload)
 
-    // TODO Week 5: Rules engine
-    logger.info({ callId: payload.callId }, 'Step 3: Rules engine (TODO Week 5)')
-
-    // TODO Week 6: GPT-5.4-mini scoring + score assembly + DB write
-    logger.info({ callId: payload.callId }, 'Step 4: LLM scoring (TODO Week 6)')
+    // TODO Week 6: LLM scoring + score assembly + pricebook lookup
+    logger.info({ callId: payload.callId }, 'LLM scoring (TODO Week 6)')
 
     // TODO Week 7: Send push notification
-    logger.info({ callId: payload.callId }, 'Step 7: Push notification (TODO Week 7)')
+    logger.info({ callId: payload.callId }, 'Push notification (TODO Week 7)')
 
-    return { callId: payload.callId, status: 'transcribed' }
+    return { callId: payload.callId, status: 'scored' }
   },
   {
     connection: getRedisClient(),
