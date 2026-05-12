@@ -37,6 +37,15 @@ export type PlumbingDimension =
 export type ScoringDimension = DrainDimension | PlumbingDimension
 export type OpportunityType = ScoringDimension
 
+// ---- Qualitative Dimensions (LLM-evaluated, no direct dollar value) ---------
+export type QualitativeDimension =
+  | 'diagnosis_quality'     // Root cause explained clearly; recurrence risk discussed
+  | 'customer_education'    // Trust built before pricing; price not rushed
+  | 'close_quality'         // Options presented; objection handling; confident close
+  | 'hydrojet_presentation' // Hydrojetting or permanent solution presented as alternative
+
+export type AnyDimension = ScoringDimension | QualitativeDimension
+
 // ---- Entities ---------------------------------------------------------------
 
 export interface Company {
@@ -107,11 +116,11 @@ export interface Transcript {
 }
 
 export interface DimensionScore {
-  dimension: ScoringDimension
-  score: number          // 0–100
+  dimension: AnyDimension    // was: ScoringDimension
+  score: number              // 0–100
   triggered: boolean
   offered: boolean
-  confidence: number     // 0–1
+  confidence: number         // 0–1
   reasoning?: string
 }
 
