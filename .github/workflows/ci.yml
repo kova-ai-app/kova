@@ -64,6 +64,11 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Check migration drift
+        run: |
+          pnpm --filter @kova/db exec drizzle-kit generate
+          git diff --exit-code packages/db/src/migrations/
+
       - name: Lint
         run: pnpm lint
 
