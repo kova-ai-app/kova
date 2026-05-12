@@ -1,7 +1,8 @@
-import { Platform } from 'react-native'
+import { Platform, PermissionsAndroid } from 'react-native'
 import { AudioContext } from 'react-native-audio-api'
 import * as Notifications from 'expo-notifications'
 import RNFS from 'react-native-fs'
+import { v4 as uuidv4 } from 'uuid'
 import { addChunk } from '../stores/upload-queue'
 
 // ---------------------------------------------------------------------------
@@ -28,7 +29,6 @@ export async function requestRecordingPermissions(): Promise<void> {
   }
 
   if (Platform.OS === 'android') {
-    const { PermissionsAndroid } = require('react-native')
     // API 34+ requires FOREGROUND_SERVICE_MICROPHONE at runtime
     if (Platform.Version >= 34) {
       const fsmStatus = await PermissionsAndroid.request(
@@ -135,7 +135,6 @@ export async function startRecorder(sessionId: string): Promise<void> {
 
 function handleChunkRotation(filePath: string, durationSec: number): void {
   if (!currentSessionId) return
-  const { v4: uuidv4 } = require('uuid')
   RNFS.stat(filePath)
     .then((stat: { size: number }) => {
       addChunk(currentSessionId!, {

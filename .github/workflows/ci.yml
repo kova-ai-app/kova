@@ -104,7 +104,6 @@ jobs:
 
       - name: Test
         run: pnpm test
-        continue-on-error: true  # No tests yet; remove when Week 4+ tests are added
 
       # -------------------------------------------------------------------------
       # Cleanup — always delete the Neon branch even if tests fail

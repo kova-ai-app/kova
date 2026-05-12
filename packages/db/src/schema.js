@@ -1,3 +1,4 @@
+/* eslint-env commonjs */
 // Test-only stub — real schema.js is produced by tsc at build time.
 // vi.mock('@kova/db', factory) overrides all exports in test files anyway.
 Object.defineProperty(exports, '__esModule', { value: true })

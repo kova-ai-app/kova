@@ -12,6 +12,9 @@ export default tseslint.config(
       '**/android/**',
       '**/ios/**',
       '**/coverage/**',
+      // CJS test stubs — not real source files; tsc generates .js at build time
+      'packages/db/src/client.js',
+      'packages/db/src/schema.js',
     ],
   },
   {

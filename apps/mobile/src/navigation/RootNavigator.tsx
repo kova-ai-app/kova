@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native'
+import { NavigationContainer } from '@react-navigation/native'
+import type { NavigationContainerRef } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useAuth } from '@clerk/clerk-expo'
 import TabNavigator from './TabNavigator'
