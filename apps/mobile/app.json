@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.kovaapp.mobile",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Kova records service calls to help your team improve revenue.",
-        "NSBackgroundModes": ["audio"]
+        "NSBackgroundModes": ["audio", "remote-notification"]
       },
       "buildNumber": "1"
     },
