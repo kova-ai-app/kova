@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react'
 import { Alert } from 'react-native'
-import { ClerkProvider } from '@clerk/clerk-expo'
+import { ClerkProvider, useAuth } from '@clerk/clerk-expo'
 import * as SecureStore from 'expo-secure-store'
 import { StatusBar } from 'expo-status-bar'
 import * as Sentry from '@sentry/react-native'
+import NetInfo from '@react-native-community/netinfo'
 import RootNavigator from './navigation/RootNavigator'
 import { getIncompleteSession, setSessionStatus } from './stores/upload-queue'
 import { useRecordingStore } from './stores/recording-store'
+import { runUploadManager } from './services/upload-manager'
 
 // ---------------------------------------------------------------------------
 // Sentry — initialize before any rendering
@@ -45,6 +47,21 @@ const tokenCache = {
 const CLERK_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 function AppInner() {
+  const { getToken } = useAuth()
+
+  const triggerUpload = async () => {
+    try {
+      const token = await getToken()
+      if (!token) return
+      await runUploadManager({
+        apiBaseUrl: process.env.EXPO_PUBLIC_API_URL ?? 'https://kova.vercel.app',
+        authToken: token,
+      })
+    } catch {
+      // Silent — will retry on next trigger
+    }
+  }
+
   useEffect(() => {
     // Check for incomplete recording session on startup
     const incomplete = getIncompleteSession()
@@ -66,11 +83,21 @@ function AppInner() {
             onPress: () => {
               setSessionStatus(incomplete.sessionId, 'uploading')
               useRecordingStore.getState().setStatus('uploading')
+              triggerUpload()
             },
           },
         ]
       )
     }
+
+    // Run upload manager on app open
+    triggerUpload()
+
+    // Run upload manager on connectivity restored
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (state.isConnected) triggerUpload()
+    })
+    return () => unsubscribe()
   }, [])
 
   return (
@@ -83,7 +110,7 @@ function AppInner() {
 
 export default function App() {
   if (!CLERK_KEY) {
-    // Clerk not configured — show placeholder for scaffold
+    // Clerk not configured — show scaffold without upload manager
     return (
       <>
         <StatusBar style="auto" />
