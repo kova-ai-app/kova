@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useUser, useOrganization, useAuth } from '@clerk/clerk-expo'
 
 // ---------------------------------------------------------------------------
@@ -27,9 +27,17 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function ProfileContent() {
-  const { user } = useUser()
-  const { organization } = useOrganization()
+  const { user, isLoaded: userLoaded } = useUser()
+  const { organization, isLoaded: orgLoaded } = useOrganization()
   const { signOut } = useAuth()
+
+  if (!userLoaded || !orgLoaded) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    )
+  }
 
   const name = user?.fullName ?? user?.firstName ?? 'Unknown'
   const phone = user?.primaryPhoneNumber?.phoneNumber ?? '—'

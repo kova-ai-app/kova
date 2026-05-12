@@ -7,7 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native'
-import { useSignIn } from '@clerk/clerk-expo'
+import { useSignIn, isClerkAPIResponseError } from '@clerk/clerk-expo'
 
 // ---------------------------------------------------------------------------
 // SignInScreen — Phone OTP authentication
@@ -51,10 +51,31 @@ function OTPSignIn() {
     setLoading(true)
     setError(null)
     try {
-      await signIn.create({ identifier: phone })
+      // Step 1: Look up account by phone number
+      const result = await signIn.create({ identifier: phone })
+
+      // Step 2: Find the phone_code first factor and prepare it (sends the SMS)
+      const phoneCodeFactor = result.supportedFirstFactors?.find(
+        (factor) => factor.strategy === 'phone_code'
+      ) as { strategy: 'phone_code'; phoneNumberId: string } | undefined
+
+      if (!phoneCodeFactor) {
+        setError('Phone authentication is not available for this account.')
+        return
+      }
+
+      await signIn.prepareFirstFactor({
+        strategy: 'phone_code',
+        phoneNumberId: phoneCodeFactor.phoneNumberId,
+      })
+
       setPhase('code')
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to send code'
+      const msg = isClerkAPIResponseError(err)
+        ? (err.errors[0]?.longMessage ?? err.errors[0]?.message ?? 'Failed to send code')
+        : err instanceof Error
+          ? err.message
+          : 'Failed to send code'
       setError(msg)
     } finally {
       setLoading(false)
@@ -76,7 +97,11 @@ function OTPSignIn() {
         setError('Verification incomplete. Please try again.')
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Invalid code'
+      const msg = isClerkAPIResponseError(err)
+        ? (err.errors[0]?.longMessage ?? err.errors[0]?.message ?? 'Invalid code')
+        : err instanceof Error
+          ? err.message
+          : 'Invalid code'
       setError(msg)
     } finally {
       setLoading(false)
