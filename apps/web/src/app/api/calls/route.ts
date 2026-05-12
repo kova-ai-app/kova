@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db, calls, scores, users, companies } from '@kova/db'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth'
 
 const PAGE_SIZE = 20
@@ -22,8 +22,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const page = Math.max(0, parseInt(searchParams.get('page') ?? '0', 10))
 
-  // Technicians only see their own calls — resolve their DB user record
-  let whereClause = eq(calls.companyId, company.id)
+  // Build filter conditions
+  const conditions = [eq(calls.companyId, company.id)]
+
+  // Technicians only see their own calls
   if (role === 'technician') {
     const [user] = await db
       .select({ id: users.id })
@@ -32,14 +34,33 @@ export async function GET(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
-    whereClause = and(eq(calls.companyId, company.id), eq(calls.techId, user.id))!
+    conditions.push(eq(calls.techId, user.id))
   }
+
+  // Optional filters
+  const techId = searchParams.get('techId')
+  if (techId) conditions.push(eq(calls.techId, techId))
+
+  const jobType = searchParams.get('jobType')
+  if (jobType) conditions.push(eq(calls.jobType, jobType as 'drain' | 'plumbing' | 'both'))
+
+  const statusFilter = searchParams.get('status')
+  if (statusFilter) conditions.push(eq(calls.status, statusFilter as 'uploading' | 'pending' | 'processing' | 'transcribed' | 'scored' | 'failed'))
+
+  const dateFrom = searchParams.get('dateFrom')
+  if (dateFrom) conditions.push(gte(calls.recordedAt, new Date(dateFrom)))
+
+  const dateTo = searchParams.get('dateTo')
+  if (dateTo) conditions.push(lte(calls.recordedAt, new Date(dateTo)))
+
+  const whereClause = and(...conditions)!
 
   const [callsList, countResult] = await Promise.all([
     db
       .select({
         id: calls.id,
         techId: calls.techId,
+        techName: users.name,
         recordedAt: calls.recordedAt,
         durationSec: calls.durationSec,
         status: calls.status,
@@ -51,6 +72,7 @@ export async function GET(request: Request) {
       })
       .from(calls)
       .leftJoin(scores, eq(scores.id, calls.scoreId))
+      .leftJoin(users, eq(users.id, calls.techId))
       .where(whereClause)
       .orderBy(desc(calls.recordedAt))
       .limit(PAGE_SIZE)

@@ -14,6 +14,8 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
   and: vi.fn(),
   desc: vi.fn(),
+  gte: vi.fn(),
+  lte: vi.fn(),
   sql: vi.fn().mockReturnValue('count(*)'),
 }))
 
@@ -29,6 +31,7 @@ const MOCK_CALLS = [
   {
     id: 'call-1',
     techId: 'tech-1',
+    techName: 'John Smith',
     recordedAt: new Date('2026-05-12T10:00:00Z'),
     durationSec: 600,
     status: 'scored',
@@ -44,10 +47,12 @@ function mockSelectChain(result: object[]) {
   ;(db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
     from: vi.fn().mockReturnValue({
       leftJoin: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          orderBy: vi.fn().mockReturnValue({
-            limit: vi.fn().mockReturnValue({
-              offset: vi.fn().mockResolvedValue(result),
+        leftJoin: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                offset: vi.fn().mockResolvedValue(result),
+              }),
             }),
           }),
         }),
@@ -92,5 +97,26 @@ describe('GET /api/calls', () => {
     const req = new Request('http://localhost/api/calls?page=0')
     const res = await GET(req)
     expect(res.status).toBe(200)
+  })
+
+  it('4. filter by jobType returns 200 with filtered results', async () => {
+    ;(requireRole as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(OWNER_CTX)
+    mockSelectChain(MOCK_CALLS)
+
+    const req = new Request('http://localhost/api/calls?page=0&jobType=drain')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+  })
+
+  it('5. response includes techName from users join', async () => {
+    ;(requireRole as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(OWNER_CTX)
+    mockSelectChain(MOCK_CALLS)
+
+    const req = new Request('http://localhost/api/calls?page=0')
+    const res = await GET(req)
+    const body = await res.json()
+    expect(body.data[0]).toHaveProperty('techName', 'John Smith')
   })
 })
