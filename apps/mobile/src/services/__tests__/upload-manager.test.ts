@@ -165,3 +165,50 @@ describe('runUploadManager — retry on failure', () => {
     expect(session?.chunks[0]?.status).toBe('pending')
   })
 })
+
+describe('runUploadManager — upload-complete failure', () => {
+  it('sets session status to failed when upload-complete API returns error', async () => {
+    createSession({
+      sessionId: 'sess-2',
+      callId: 'call-2',
+      techId: 'tech-1',
+      companyId: 'co-1',
+      consentLoggedAt: '2026-05-12T10:00:00.000Z',
+    })
+    addChunk('sess-2', {
+      chunkId: 'chunk-1',
+      chunkIndex: 0,
+      filePath: '/tmp/chunk_0.aac',
+      sizeBytes: 1200000,
+      durationSec: 300,
+    })
+    setSessionStopped('sess-2')
+    markConsentSynced('sess-2')
+
+    // Mock: upload-url and S3 PUT succeed, upload-complete fails (non-ok)
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          presignedUrl: 'https://s3.amazonaws.com/bucket/key?sig=abc',
+          s3Key: 'audio/co-1/sess-2/chunk_0.aac',
+          expiresIn: 900,
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+
+    await runUploadManager({ apiBaseUrl: API_BASE, authToken: AUTH_TOKEN })
+
+    const session = getSession('sess-2')
+    expect(session?.overallStatus).toBe('failed')
+  })
+})
+
+describe('Buffer polyfill', () => {
+  it('Buffer.from is available for base64 decoding', () => {
+    expect(typeof global.Buffer).toBe('function')
+    const result = Buffer.from('AAAA', 'base64')
+    expect(result).toBeInstanceOf(Uint8Array)
+  })
+})

@@ -103,3 +103,24 @@ describe('concurrent guard', () => {
     ).rejects.toThrow('Recording already active')
   })
 })
+
+describe('consentGranted error handling', () => {
+  it('sets error and resets to idle when startRecorder throws', async () => {
+    const recordingModule = await import('../../services/recording')
+    ;(recordingModule.startRecorder as unknown as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new Error('Microphone busy'))
+
+    // Directly set the state that consentGranted requires
+    useRecordingStore.setState({
+      status: 'consent_shown',
+      techId: 'tech-1',
+      companyId: 'co-1',
+    })
+
+    await useRecordingStore.getState().consentGranted()
+
+    expect(useRecordingStore.getState().status).toBe('idle')
+    expect(useRecordingStore.getState().error).toBe('Microphone busy')
+    // Session is created before startRecorder, then deleted in the catch block
+  })
+})

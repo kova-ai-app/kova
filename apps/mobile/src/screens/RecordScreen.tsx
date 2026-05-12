@@ -62,10 +62,11 @@ export default function RecordScreen() {
     }
   }, [status])
 
-  const { userId } = IS_CLERK_CONFIGURED ? useAuth() : { userId: 'dev-tech-1' }
-  const { organization } = IS_CLERK_CONFIGURED
-    ? useOrganization()
-    : { organization: { id: 'dev-org-1' } }
+  const { userId: clerkUserId } = useAuth()
+  const { organization: clerkOrganization } = useOrganization()
+
+  const userId = IS_CLERK_CONFIGURED ? clerkUserId : 'dev-tech-1'
+  const organization = IS_CLERK_CONFIGURED ? clerkOrganization : { id: 'dev-org-1' }
 
   const handlePressRecord = async () => {
     if (!userId || !organization?.id) {

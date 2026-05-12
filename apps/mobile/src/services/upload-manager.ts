@@ -122,9 +122,11 @@ async function processSession(
         }
       }
       setSessionStatus(session.sessionId, 'complete')
+    } else {
+      setSessionStatus(session.sessionId, 'failed')
     }
   } catch {
-    // upload-complete failed — will retry on next run
+    setSessionStatus(session.sessionId, 'failed')
   }
 }
 

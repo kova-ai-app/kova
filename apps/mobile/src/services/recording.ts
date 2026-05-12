@@ -14,6 +14,7 @@ const MIN_FREE_BYTES = 200 * 1024 * 1024  // 200 MB
 const RECORDING_NOTIFICATION_ID = 'kova-recording-active'
 
 let audioContext: InstanceType<typeof AudioContext> | null = null
+let recorder: any = null
 let currentSessionId: string | null = null
 let chunkIndex = 0
 
@@ -109,6 +110,9 @@ async function dismissRecordingNotification(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function startRecorder(sessionId: string): Promise<void> {
+  if (recorder !== null) {
+    throw new Error('Recorder already active')
+  }
   currentSessionId = sessionId
   chunkIndex = 0
 
@@ -117,7 +121,7 @@ export async function startRecorder(sessionId: string): Promise<void> {
     latencyHint: 'balanced',
   } as any)
 
-  const recorder = (audioContext as any).createAudioRecorder({
+  recorder = (audioContext as any).createAudioRecorder({
     bitRate: 32000,
     sampleRate: 44100,
     channels: 1,
@@ -160,8 +164,8 @@ function handleChunkRotation(filePath: string, durationSec: number): void {
 export async function stopRecorder(): Promise<{ durationSec: number }> {
   if (!audioContext || !currentSessionId) return { durationSec: 0 }
 
-  const recorder = (audioContext as any).recorder
   const result = await recorder?.stop()
+  recorder = null
   await dismissRecordingNotification()
 
   if (result?.filePath && result?.durationSec > 0) {
