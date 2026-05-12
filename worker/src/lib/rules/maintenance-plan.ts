@@ -34,6 +34,11 @@ const OFFER_PHRASES_ES = [
   'limpieza anual', 'membresía', 'plan de protección',
 ]
 
+// Language-agnostic: all EN + ES phrases are always checked regardless of ctx.language.
+// This matches the established CameraInspectionRule pattern.
+const ALL_TRIGGERS = [...TRIGGER_PHRASES_EN, ...TRIGGER_PHRASES_ES]
+const ALL_OFFERS = [...OFFER_PHRASES_EN, ...OFFER_PHRASES_ES]
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -59,9 +64,6 @@ export class MaintenancePlanRule implements ScoringRule {
     // Only applies to drain and both job types
     if (ctx.jobType === 'plumbing') return null
 
-    const allTriggers = [...TRIGGER_PHRASES_EN, ...TRIGGER_PHRASES_ES]
-    const allOffers = [...OFFER_PHRASES_EN, ...OFFER_PHRASES_ES]
-
     let triggered = false
     let offered = false
     let clipStartSec: number | undefined
@@ -70,7 +72,7 @@ export class MaintenancePlanRule implements ScoringRule {
     for (const seg of ctx.segments) {
       const text = seg.text
 
-      if (!triggered && matchesAny(text, allTriggers)) {
+      if (!triggered && matchesAny(text, ALL_TRIGGERS)) {
         triggered = true
         clipStartSec = seg.startSec
       }
@@ -78,7 +80,7 @@ export class MaintenancePlanRule implements ScoringRule {
       // Offer must be in the close window (last 40% of call)
       if (
         !offered &&
-        matchesAny(text, allOffers) &&
+        matchesAny(text, ALL_OFFERS) &&
         isInCloseWindow(seg.startSec, ctx.durationSec)
       ) {
         offered = true
@@ -92,8 +94,8 @@ export class MaintenancePlanRule implements ScoringRule {
       triggered,
       offered,
       confidence: 0.95,
-      clipStartSec,
-      clipEndSec,
+      ...(clipStartSec !== undefined && { clipStartSec }),
+      ...(clipEndSec !== undefined && { clipEndSec }),
     }
   }
 }

@@ -35,6 +35,11 @@ const OFFER_PHRASES_ES = [
   'cámara en la tubería', 'hacer una cámara', 'pasar la cámara',
 ]
 
+// Language-agnostic: all EN + ES phrases are always checked regardless of ctx.language.
+// This matches the established CameraInspectionRule pattern.
+const ALL_TRIGGERS = [...TRIGGER_PHRASES_EN, ...TRIGGER_PHRASES_ES]
+const ALL_OFFERS = [...OFFER_PHRASES_EN, ...OFFER_PHRASES_ES]
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -55,9 +60,6 @@ export class CameraInspectionRule implements ScoringRule {
     // Only applies to drain and both job types
     if (ctx.jobType === 'plumbing') return null
 
-    const allTriggers = [...TRIGGER_PHRASES_EN, ...TRIGGER_PHRASES_ES]
-    const allOffers = [...OFFER_PHRASES_EN, ...OFFER_PHRASES_ES]
-
     let triggered = false
     let offered = false
     let clipStartSec: number | undefined
@@ -66,12 +68,12 @@ export class CameraInspectionRule implements ScoringRule {
     for (const seg of ctx.segments) {
       const text = seg.text
 
-      if (!triggered && matchesAny(text, allTriggers)) {
+      if (!triggered && matchesAny(text, ALL_TRIGGERS)) {
         triggered = true
         clipStartSec = seg.startSec
       }
 
-      if (!offered && matchesAny(text, allOffers)) {
+      if (!offered && matchesAny(text, ALL_OFFERS)) {
         offered = true
         clipEndSec = seg.endSec
         if (clipStartSec === undefined) clipStartSec = seg.startSec
