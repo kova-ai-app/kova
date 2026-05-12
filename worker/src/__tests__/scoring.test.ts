@@ -16,6 +16,7 @@ vi.mock('../lib/rules/index.js', () => ({ runRules: vi.fn() }))
 vi.mock('../lib/llm.js', () => ({ analyzeTranscript: vi.fn() }))
 vi.mock('../lib/pricebook.js', () => ({ lookupPrice: vi.fn() }))
 vi.mock('../lib/score-assembly.js', () => ({ assembleScore: vi.fn() }))
+vi.mock('../lib/push.js', () => ({ sendCallScoredNotification: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('../lib/redis.js', () => ({ getRedisClient: vi.fn().mockReturnValue({}) }))
 vi.mock('bullmq', () => ({
   Worker: vi.fn().mockImplementation(() => ({ on: vi.fn(), close: vi.fn() })),
@@ -28,9 +29,10 @@ import { runRules } from '../lib/rules/index.js'
 import { analyzeTranscript } from '../lib/llm.js'
 import { lookupPrice } from '../lib/pricebook.js'
 import { assembleScore } from '../lib/score-assembly.js'
+import { sendCallScoredNotification } from '../lib/push.js'
 import { processTranscription } from '../workers/scoring.js'
 
-const MOCK_CALL = { id: 'call-1', companyId: 'co-1', language: 'en', durationSec: 600, jobType: 'drain' }
+const MOCK_CALL = { id: 'call-1', companyId: 'co-1', language: 'en', durationSec: 600, jobType: 'drain', techId: 'tech-1' }
 
 const MOCK_TRANSCRIPT_RESULT = {
   segments: [
@@ -109,6 +111,7 @@ describe('processTranscription', () => {
     ;(lookupPrice as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_PRICE_RESULT)
     ;(analyzeTranscript as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_LLM_ANALYSIS)
     ;(assembleScore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(MOCK_ASSEMBLED)
+    ;(sendCallScoredNotification as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined)
   })
 
   it('calls all pipeline steps: download, transcribe, rules, pricebook, LLM, assembleScore', async () => {
@@ -186,5 +189,14 @@ describe('processTranscription', () => {
     ).rejects.toThrow('Deepgram transcription failed')
 
     expect(statusUpdates).toContain('failed')
+  })
+
+  it('sends push notification after scoring completes', async () => {
+    await processTranscription({
+      callId: 'call-1',
+      s3Keys: ['audio/co-1/sess-1/chunk_0.aac'],
+      totalDurationSec: 600,
+    })
+    expect(sendCallScoredNotification).toHaveBeenCalled()
   })
 })

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { QUEUE_NAMES, JOB_NAMES, ScoringJobPayloadSchema } from '@kova/shared'
 import { db, calls, transcripts, processingCosts, scores, opportunities } from '@kova/db'
 import { eq } from 'drizzle-orm'
+import { sendCallScoredNotification } from '../lib/push.js'
 import { getRedisClient } from '../lib/redis.js'
 import { createLogger } from '../lib/logger.js'
 import { downloadChunks } from '../lib/s3.js'
@@ -164,6 +165,19 @@ export async function processTranscription(payload: {
       { callId, transcriptId, scoreId, overallScore: assembled.overallScore, modelUsed: assembled.modelUsed },
       'Scoring complete'
     )
+
+    // Send push notification to the technician (non-fatal)
+    try {
+      const [callRecord] = await db
+        .select({ techId: calls.techId })
+        .from(calls)
+        .where(eq(calls.id, callId))
+      if (callRecord?.techId) {
+        await sendCallScoredNotification(callId, callRecord.techId)
+      }
+    } catch (err) {
+      logger.warn({ err, callId }, 'Push notification failed — non-fatal')
+    }
   } catch (err) {
     await db.update(calls).set({ status: 'failed' }).where(eq(calls.id, callId))
     throw err
@@ -186,9 +200,6 @@ export const scoringWorker = new Worker(
     logger.info({ callId: payload.callId }, 'Processing scoring job')
 
     await processTranscription(payload)
-
-    // TODO Week 7: Send push notification
-    logger.info({ callId: payload.callId }, 'Push notification (TODO Week 7)')
 
     return { callId: payload.callId, status: 'scored' }
   },
