@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { db, calls, scores, users, companies } from '@kova/db'
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth'
+import { withErrorHandler } from '@/lib/api-handler'
 
 const PAGE_SIZE = 20
 
-export async function GET(request: Request) {
+export const GET = withErrorHandler(async (request: Request) => {
   const authResult = await requireRole(['owner', 'manager', 'technician'])
   if (authResult instanceof NextResponse) return authResult
   const { clerkUserId, orgId, role } = authResult
@@ -90,4 +91,4 @@ export async function GET(request: Request) {
     nextPage: (page + 1) * PAGE_SIZE < total ? page + 1 : null,
     total,
   })
-}
+})

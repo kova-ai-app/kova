@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { db, users, companies } from '@kova/db'
 import { eq } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth'
+import { withErrorHandler } from '@/lib/api-handler'
 
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   const authResult = await requireRole(['owner', 'manager', 'technician'])
   if (authResult instanceof NextResponse) return authResult
   const { orgId } = authResult
@@ -23,4 +24,4 @@ export async function GET() {
     .where(eq(users.companyId, company.id))
 
   return NextResponse.json(techs)
-}
+})

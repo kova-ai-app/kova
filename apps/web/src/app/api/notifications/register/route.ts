@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { db, users, pushTokens } from '@kova/db'
 import { eq, sql } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth'
+import { withErrorHandler } from '@/lib/api-handler'
 
-export async function POST(request: Request) {
+export const POST = withErrorHandler(async (request: Request) => {
   const authResult = await requireRole(['owner', 'manager', 'technician'])
   if (authResult instanceof NextResponse) return authResult
   const { clerkUserId } = authResult
@@ -38,4 +39,4 @@ export async function POST(request: Request) {
     })
 
   return NextResponse.json({ registered: true }, { status: 201 })
-}
+})

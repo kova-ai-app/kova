@@ -4,8 +4,9 @@ import { eq } from 'drizzle-orm'
 import { unstable_cache } from 'next/cache'
 import { requireRole } from '@/lib/auth'
 import { getDashboardData } from '@/lib/dashboard'
+import { withErrorHandler } from '@/lib/api-handler'
 
-export async function GET(_request: Request) {
+export const GET = withErrorHandler(async (_request: Request) => {
   const authResult = await requireRole(['owner', 'manager', 'technician'])
   if (authResult instanceof NextResponse) return authResult
   const { orgId } = authResult
@@ -27,4 +28,4 @@ export async function GET(_request: Request) {
 
   const summary = await getCachedSummary()
   return NextResponse.json(summary)
-}
+})

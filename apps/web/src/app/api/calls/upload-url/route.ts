@@ -5,10 +5,11 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { db, companies } from '@kova/db'
 import { eq } from 'drizzle-orm'
 import { getS3Client, S3_BUCKET } from '@/lib/s3'
+import { withErrorHandler } from '@/lib/api-handler'
 
 const PRESIGNED_URL_EXPIRES_SEC = 900 // 15 minutes
 
-export async function GET(request: Request) {
+export const GET = withErrorHandler(async (request: Request) => {
   // Auth
   const { userId, orgId } = await auth()
   if (!userId || !orgId) {
@@ -51,4 +52,4 @@ export async function GET(request: Request) {
   })
 
   return NextResponse.json({ presignedUrl, s3Key, expiresIn: PRESIGNED_URL_EXPIRES_SEC })
-}
+})

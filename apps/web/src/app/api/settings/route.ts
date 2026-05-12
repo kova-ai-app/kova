@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { db, companies } from '@kova/db'
 import { eq } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth'
+import { withErrorHandler } from '@/lib/api-handler'
 
-export async function GET(_request: Request) {
+export const GET = withErrorHandler(async (_request: Request) => {
   const authResult = await requireRole(['owner', 'manager'])
   if (authResult instanceof NextResponse) return authResult
   const { orgId } = authResult
@@ -23,9 +24,9 @@ export async function GET(_request: Request) {
   }
 
   return NextResponse.json(company)
-}
+})
 
-export async function PATCH(request: Request) {
+export const PATCH = withErrorHandler(async (request: Request) => {
   const authResult = await requireRole(['owner'])
   if (authResult instanceof NextResponse) return authResult
   const { orgId } = authResult
@@ -56,4 +57,4 @@ export async function PATCH(request: Request) {
     })
 
   return NextResponse.json(updated)
-}
+})

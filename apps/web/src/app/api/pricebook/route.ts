@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 import { db, pricebookItems, companies } from '@kova/db'
 import { desc, eq } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth'
+import { withErrorHandler } from '@/lib/api-handler'
 import type { PricebookItemInput } from '@kova/shared'
 
-export async function GET(_request: Request) {
+export const GET = withErrorHandler(async (_request: Request) => {
   const authResult = await requireRole(['owner', 'manager'])
   if (authResult instanceof NextResponse) return authResult
   const { orgId } = authResult
@@ -25,9 +26,9 @@ export async function GET(_request: Request) {
     .orderBy(desc(pricebookItems.createdAt))
 
   return NextResponse.json(items)
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withErrorHandler(async (request: Request) => {
   const authResult = await requireRole(['owner'])
   if (authResult instanceof NextResponse) return authResult
   const { orgId } = authResult
@@ -73,4 +74,4 @@ export async function POST(request: Request) {
     .returning()
 
   return NextResponse.json(item, { status: 201 })
-}
+})
