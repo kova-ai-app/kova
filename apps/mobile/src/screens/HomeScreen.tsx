@@ -113,6 +113,13 @@ export default function HomeScreen() {
 
   const calls = data?.data ?? []
 
+  const [refreshing, setRefreshing] = React.useState(false)
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true)
+    await refetch()
+    setRefreshing(false)
+  }, [refetch])
+
   if (calls.length === 0) {
     return (
       <View style={styles.center}>
@@ -135,6 +142,8 @@ export default function HomeScreen() {
         )}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
     </View>
   )

@@ -87,4 +87,25 @@ describe('API client', () => {
 
     await expect(fetchCalls(TOKEN, 0)).rejects.toThrow()
   })
+
+  it('6. aborts request after timeout (15s default)', async () => {
+    // Simulate fetch that detects the abort signal and rejects with AbortError
+    global.fetch = vi.fn().mockImplementation(
+      (_url: string, options: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          options.signal?.addEventListener('abort', () => {
+            const err = new DOMException('The operation was aborted.', 'AbortError')
+            reject(err)
+          })
+          // Never resolves on its own
+        })
+    )
+
+    vi.useFakeTimers()
+    const promise = fetchCalls(TOKEN, 0)
+    vi.advanceTimersByTime(16000)
+    vi.useRealTimers()
+
+    await expect(promise).rejects.toThrow('Request timed out')
+  }, 20000)
 })

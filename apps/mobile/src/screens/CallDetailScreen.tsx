@@ -81,7 +81,7 @@ export default function CallDetailScreen({ route }: Props) {
   const [disputeReason, setDisputeReason] = useState('')
 
   // Fetch call detail
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['call', callId],
     queryFn: async () => {
       const token = await getToken()
@@ -148,6 +148,9 @@ export default function CallDetailScreen({ route }: Props) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>Could not load call detail.</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => void refetch()}>
+          <Text style={styles.retryText}>Tap to retry</Text>
+        </TouchableOpacity>
       </View>
     )
   }
@@ -289,7 +292,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   content: { paddingBottom: 40 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  errorText: { fontSize: 15, color: '#DC2626' },
+  errorText: { fontSize: 15, color: '#DC2626', marginBottom: 12 },
+  retryButton: { marginTop: 4 },
+  retryText: { fontSize: 14, color: '#2563EB', fontWeight: '600' },
   section: {
     backgroundColor: '#FFFFFF',
     marginTop: 12,
