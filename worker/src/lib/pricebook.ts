@@ -1,6 +1,7 @@
 import { db, pricebookItems } from '@kova/db'
 import { and, eq } from 'drizzle-orm'
 import type { ScoringDimension } from '@kova/shared'
+import { DEFAULT_PRICEBOOK_ITEMS } from '@kova/shared'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -15,18 +16,22 @@ export interface PriceResult {
 }
 
 // ---------------------------------------------------------------------------
-// Hardcoded CA market defaults (Phase 1 fallback)
-// Phase 2: seed per-company defaults during onboarding
+// Build fallback map from shared defaults (single source of truth)
 // ---------------------------------------------------------------------------
 
-const DEFAULT_PRICES: Partial<Record<ScoringDimension, { valueLow: number; valueHigh: number; ltvValue?: number }>> = {
-  camera_inspection:     { valueLow: 425,  valueHigh: 425 },
-  preventive_plan:       { valueLow: 299,  valueHigh: 299,  ltvValue: 1495 },  // $299/yr × 5yr
-  hydro_jetting:         { valueLow: 750,  valueHigh: 950 },
-  drain_cleaning_upsell: { valueLow: 189,  valueHigh: 289 },
-  pipe_repair:           { valueLow: 850,  valueHigh: 1500 },
-  grease_trap:           { valueLow: 350,  valueHigh: 550 },
-}
+const DEFAULT_PRICE_MAP = new Map(
+  DEFAULT_PRICEBOOK_ITEMS.map((item) => [
+    item.opportunityType,
+    {
+      valueLow: item.pricingModel === 'fixed' ? (item.priceFixed ?? 0) : (item.priceLow ?? 0),
+      valueHigh: item.pricingModel === 'fixed' ? (item.priceFixed ?? 0) : (item.priceHigh ?? 0),
+      ltvValue:
+        item.isRecurring && item.ltvAnnual && item.ltvYears
+          ? item.ltvAnnual * item.ltvYears
+          : null,
+    },
+  ])
+)
 
 // ---------------------------------------------------------------------------
 // lookupPrice
@@ -34,7 +39,7 @@ const DEFAULT_PRICES: Partial<Record<ScoringDimension, { valueLow: number; value
 
 /**
  * Look up the price for an opportunity type.
- * Queries pricebook_items for the company first; falls back to hardcoded CA defaults.
+ * Queries pricebook_items for the company first; falls back to shared defaults.
  */
 export async function lookupPrice(
   companyId: string,
@@ -65,14 +70,12 @@ export async function lookupPrice(
     }
   }
 
-  // Fall back to hardcoded CA market defaults
-  const defaults = DEFAULT_PRICES[opportunityType]
+  // Fall back to shared defaults (California industry averages)
+  const defaults = DEFAULT_PRICE_MAP.get(opportunityType)
   if (defaults) {
     return {
       pricebookItemId: null,
-      valueLow: defaults.valueLow,
-      valueHigh: defaults.valueHigh,
-      ltvValue: defaults.ltvValue ?? null,
+      ...defaults,
       isDefaultPrice: true,
     }
   }

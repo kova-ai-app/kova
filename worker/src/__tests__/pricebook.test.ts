@@ -82,20 +82,20 @@ describe('lookupPrice', () => {
     expect(result.valueLow).toBe(299)
   })
 
-  it('4. falls back to hardcoded default when no pricebook item found', async () => {
+  it('4. falls back to shared default when no pricebook item found', async () => {
     mockDbSelect(null)
     const result = await lookupPrice('co-1', 'camera_inspection')
-    expect(result.valueLow).toBe(425)
-    expect(result.valueHigh).toBe(425)
+    expect(result.valueLow).toBe(199)
+    expect(result.valueHigh).toBe(199)
     expect(result.isDefaultPrice).toBe(true)
     expect(result.pricebookItemId).toBeNull()
   })
 
-  it('5. returns zeros for unknown opportunity type with no pricebook item', async () => {
+  it('5. returns shared default for plumbing opportunity type with no pricebook item', async () => {
     mockDbSelect(null)
     const result = await lookupPrice('co-1', 'whole_home_repiping')
-    expect(result.valueLow).toBe(0)
-    expect(result.valueHigh).toBe(0)
+    expect(result.valueLow).toBe(4000)
+    expect(result.valueHigh).toBe(12000)
     expect(result.isDefaultPrice).toBe(true)
     expect(result.pricebookItemId).toBeNull()
   })
