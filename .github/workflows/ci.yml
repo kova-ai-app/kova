@@ -7,7 +7,9 @@ on:
     branches: [main, staging]
 
 env:
-  # Stub values so typecheck/build don't fail on missing env vars
+  # Stub values — typecheck/lint/test work without a real DB.
+  # When NEON_API_KEY is set as a GitHub secret, the Neon steps below
+  # override DATABASE_URL / DATABASE_URL_UNPOOLED with a real test branch.
   DATABASE_URL: "postgres://stub:stub@localhost/stub"
   DATABASE_URL_UNPOOLED: "postgres://stub:stub@localhost/stub"
   REDIS_URL: "redis://localhost:6379"
@@ -24,8 +26,11 @@ env:
   NEXT_PUBLIC_SENTRY_DSN: ""
   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_stub"
   EXPO_PUBLIC_SENTRY_DSN: ""
-  APP_ENV: "development"
+  APP_ENV: "test"
   NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+  # Mapped from secrets — empty string when not configured (steps check this)
+  NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+  NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
 
 jobs:
   ci:
@@ -72,6 +77,43 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # -------------------------------------------------------------------------
+      # Neon test branch — only runs when NEON_API_KEY secret is configured.
+      # TODO: Add NEON_API_KEY and NEON_PROJECT_ID to GitHub Actions secrets
+      #       (Settings → Secrets → Actions) once the Neon project is created.
+      # -------------------------------------------------------------------------
+
+      - name: Create Neon test branch
+        id: neon-branch
+        if: env.NEON_API_KEY != ''
+        uses: neondatabase/create-branch-action@v5
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          branch_name: ci-${{ github.run_id }}-${{ github.run_attempt }}
+          api_key: ${{ env.NEON_API_KEY }}
+
+      - name: Override DATABASE_URL with Neon test branch
+        if: env.NEON_API_KEY != '' && steps.neon-branch.outputs.db_url != ''
+        run: |
+          echo "DATABASE_URL=${{ steps.neon-branch.outputs.db_url_with_pooler }}" >> $GITHUB_ENV
+          echo "DATABASE_URL_UNPOOLED=${{ steps.neon-branch.outputs.db_url }}" >> $GITHUB_ENV
+
+      - name: Run migrations against Neon test branch
+        if: env.NEON_API_KEY != '' && steps.neon-branch.outputs.db_url != ''
+        run: pnpm --filter @kova/db db:migrate
+
       - name: Test
         run: pnpm test
-        continue-on-error: true  # No tests yet in Week 1; remove when Week 4+ tests are added
+        continue-on-error: true  # No tests yet; remove when Week 4+ tests are added
+
+      # -------------------------------------------------------------------------
+      # Cleanup — always delete the Neon branch even if tests fail
+      # -------------------------------------------------------------------------
+
+      - name: Delete Neon test branch
+        if: always() && env.NEON_API_KEY != '' && steps.neon-branch.outputs.branch_id != ''
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          branch_id: ${{ steps.neon-branch.outputs.branch_id }}
+          api_key: ${{ env.NEON_API_KEY }}
