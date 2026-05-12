@@ -26,6 +26,8 @@ export function AudioPlayer({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [speed, setSpeed] = useState(1)
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
 
   // External seek (from transcript click or opportunity timestamp)
   useEffect(() => {
@@ -35,15 +37,20 @@ export function AudioPlayer({
     }
   }, [seekTo, onSeeked])
 
-  const togglePlay = useCallback(() => {
-    if (!audioRef.current) return
-    if (isPlaying) {
-      audioRef.current.pause()
-    } else {
-      audioRef.current.play()
+  const togglePlay = useCallback(async () => {
+    if (!audioRef.current || hasError) return
+    try {
+      if (isPlaying) {
+        audioRef.current.pause()
+        setIsPlaying(false)
+      } else {
+        await audioRef.current.play()
+        setIsPlaying(true)
+      }
+    } catch {
+      setHasError(true)
     }
-    setIsPlaying(!isPlaying)
-  }, [isPlaying])
+  }, [isPlaying, hasError])
 
   const handleTimeUpdate = useCallback(() => {
     if (!audioRef.current) return
@@ -79,12 +86,23 @@ export function AudioPlayer({
           ref={audioRef}
           src={src}
           onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={() =>
+          onLoadedMetadata={() => {
             setDuration(audioRef.current?.duration ?? 0)
-          }
+            setIsLoading(false)
+          }}
+          onError={() => {
+            setHasError(true)
+            setIsLoading(false)
+          }}
           onEnded={() => setIsPlaying(false)}
           preload="metadata"
         />
+        {isLoading && <p className="text-xs text-muted-foreground mb-2">Loading audio...</p>}
+        {hasError && (
+          <p className="text-xs text-destructive mb-2">
+            Failed to load audio. The URL may have expired.
+          </p>
+        )}
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={togglePlay}>
             {isPlaying ? (

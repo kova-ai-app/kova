@@ -42,7 +42,10 @@ export function TranscriptViewer({
           ref={containerRef}
           className="max-h-96 overflow-y-auto space-y-1"
         >
-          {segments.map((seg, i) => {
+          {segments.length === 0 ? (
+            <p className="text-sm text-muted-foreground px-4 pb-4">No transcript available</p>
+          ) : (
+            segments.map((seg, i) => {
             const isActive =
               currentTime >= seg.startSec && currentTime < seg.endSec
             return (
@@ -85,7 +88,8 @@ export function TranscriptViewer({
                 </div>
               </div>
             )
-          })}
+          })
+        )}
         </div>
       </CardContent>
     </Card>

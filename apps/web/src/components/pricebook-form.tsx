@@ -98,12 +98,12 @@ export function PricebookForm({
       trade,
       opportunityType,
       pricingModel,
-      priceFixed: pricingModel === 'fixed' ? Number(priceFixed) || null : null,
-      priceLow: pricingModel === 'range' ? Number(priceLow) || null : null,
-      priceHigh: pricingModel === 'range' ? Number(priceHigh) || null : null,
+      priceFixed: pricingModel === 'fixed' ? (priceFixed !== '' ? Number(priceFixed) : null) : null,
+      priceLow: pricingModel === 'range' ? (priceLow !== '' ? Number(priceLow) : null) : null,
+      priceHigh: pricingModel === 'range' ? (priceHigh !== '' ? Number(priceHigh) : null) : null,
       isRecurring,
-      ltvAnnual: isRecurring ? Number(ltvAnnual) || null : null,
-      ltvYears: isRecurring ? Number(ltvYears) || null : null,
+      ltvAnnual: isRecurring ? (ltvAnnual !== '' ? Number(ltvAnnual) : null) : null,
+      ltvYears: isRecurring ? (ltvYears !== '' ? Number(ltvYears) : null) : null,
     }
     onSubmit(data)
   }
