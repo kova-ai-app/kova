@@ -115,6 +115,18 @@ export interface DimensionScore {
   reasoning?: string
 }
 
+// ---- Rules Engine -----------------------------------------------------------
+
+export interface RuleResult {
+  dimension: ScoringDimension
+  triggered: boolean         // signal detected in the transcript
+  offered: boolean           // tech explicitly offered the upsell
+  confidence: number         // 0–1; rules are deterministic so always 0.95 unless suppressed
+  clipStartSec?: number      // start of the relevant segment
+  clipEndSec?: number        // end of the relevant segment
+  suppressedReason?: 'emergency' | 'short_call'
+}
+
 export interface Score {
   id: string
   callId: string
