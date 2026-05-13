@@ -7,6 +7,14 @@ const nextConfig = {
   },
   // Packages that need to be transpiled for server components
   serverExternalPackages: ['@neondatabase/serverless'],
+  webpack: (config) => {
+    // Allow webpack to resolve .js imports as .ts/.tsx (TypeScript ESM convention)
+    config.resolve.extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js'],
+      '.jsx': ['.tsx', '.jsx'],
+    }
+    return config
+  },
 }
 
 export default withSentryConfig(nextConfig, {
