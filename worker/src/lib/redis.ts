@@ -6,6 +6,7 @@ if (!REDIS_URL) {
 }
 
 export function createClient() {
+  // ioredis infers TLS from the rediss:// URL scheme (required by Upstash)
   const redis = new Redis(REDIS_URL!, {
     maxRetriesPerRequest: null, // Required by BullMQ
     enableReadyCheck: false,
