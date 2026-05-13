@@ -130,16 +130,24 @@ export async function startRecorder(sessionId: string): Promise<void> {
 export async function stopRecorder(): Promise<{ durationSec: number }> {
   if (!recorder || !currentSessionId) return { durationSec: 0 }
 
+  const sessionId = currentSessionId
   const result = recorder.stop()
+  recorder = null
+  currentSessionId = null
   await stopRecordingForegroundService()
 
-  if (result.status === 'success' && result.paths.length > 0) {
+  if (result.status === 'error') {
+    console.error('[Recording] Failed to stop recorder:', result.message)
+    return { durationSec: 0 }
+  }
+
+  if (result.paths.length > 0) {
     const durationPerChunk = result.duration / result.paths.length
-    // size is in MB, convert to bytes
+    // size is in MB (per FileInfo JSDoc), convert to bytes
     const sizePerChunk = Math.round((result.size * 1024 * 1024) / result.paths.length)
 
     for (const filePath of result.paths) {
-      addChunk(currentSessionId!, {
+      addChunk(sessionId, {
         chunkId: uuidv4(),
         chunkIndex: chunkIndex++,
         filePath,
@@ -149,10 +157,7 @@ export async function stopRecorder(): Promise<{ durationSec: number }> {
     }
   }
 
-  const totalDuration = result.status === 'success' ? result.duration : 0
-  recorder = null
-  currentSessionId = null
-  return { durationSec: totalDuration }
+  return { durationSec: result.duration }
 }
 
 export async function pauseRecorder(): Promise<void> {
