@@ -159,6 +159,9 @@ export default function CallDetailScreen({ route }: Props) {
   const score = data.score as Record<string, unknown> | null
   const opportunities = data.opportunities as Record<string, unknown>[]
   const coachingPoints = data.coachingPoints as Record<string, unknown>[]
+  const transcript = data.transcript as {
+    segments?: Array<{ speaker: number; text: string; start: number; language?: string }>
+  } | null
   const durationMin = Math.round((call.durationSec as number) / 60)
 
   return (
@@ -216,6 +219,21 @@ export default function CallDetailScreen({ route }: Props) {
           {coachingPoints.map((cp) => (
             <View key={cp.id as string} style={styles.coachingRow}>
               <Text style={styles.coachingText}>{cp.text as string}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {/* Transcript */}
+      {transcript?.segments && transcript.segments.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Transcript</Text>
+          {transcript.segments.map((seg, idx) => (
+            <View key={idx} style={styles.transcriptRow}>
+              <Text style={styles.speakerLabel}>
+                {`Speaker ${seg.speaker}${seg.language === 'es' ? '  (ES)' : ''}`}
+              </Text>
+              <Text style={styles.transcriptText}>{seg.text}</Text>
             </View>
           ))}
         </View>
@@ -319,6 +337,16 @@ const styles = StyleSheet.create({
   disputeBtnText: { fontSize: 12, color: '#DC2626', fontWeight: '600' },
   coachingRow: { paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   coachingText: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  transcriptRow: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  speakerLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  transcriptText: { fontSize: 14, color: '#374151', lineHeight: 20 },
   audioBtn: { backgroundColor: '#2563EB', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   audioBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
