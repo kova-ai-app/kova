@@ -258,6 +258,7 @@ describe('runUploadManager — multi-session drain', () => {
 
     for (let i = 1; i <= 3; i++) {
       expect(getSession(`sess-multi-${i}`)?.overallStatus).toBe('complete')
+      expect(getSession(`sess-multi-${i}`)?.chunks.every((c) => c.status === 'uploaded')).toBe(true)
     }
     expect(mockFetch).toHaveBeenCalledTimes(9)
   })
@@ -379,6 +380,9 @@ describe('runUploadManager — partial chunk failure', () => {
     // Not all uploaded -> no upload-complete call
     // Chunk 0: attempt=1 < 5 -> status stays 'pending' (not 'failed')
     // allUploaded=false, anyFailed=false -> session stays 'uploading'
+    // 'uploading' is the expected terminal state here:
+    // allUploaded=false (chunk 0 failed), anyFailed=false (attempt=1 < 5 threshold),
+    // so processSession returns without calling setSessionStatus again
     expect(session?.overallStatus).toBe('uploading')
     expect(session?.chunks[0]?.status).toBe('pending')
     expect(session?.chunks[0]?.uploadAttempts).toBe(1)
@@ -401,11 +405,11 @@ describe('runUploadManager — crash recovery', () => {
     addChunk('sess-crash', { chunkId: 'c-cr-1', chunkIndex: 1, filePath: '/tmp/cr_1.aac', sizeBytes: 1200000, durationSec: 300 })
     addChunk('sess-crash', { chunkId: 'c-cr-2', chunkIndex: 2, filePath: '/tmp/cr_2.aac', sizeBytes: 1200000, durationSec: 300 })
 
-    // Simulate pre-crash state: consent synced, chunk 0 uploaded, session was mid-upload
+    // Simulate pre-crash state: recording stopped, upload started, chunk 0 uploaded, then crash
+    setSessionStopped('sess-crash')       // recordingStoppedAt set, status='stopped'
     markConsentSynced('sess-crash')
     markChunkUploaded('sess-crash', 'c-cr-0', 'audio/co-1/sess-crash/chunk_0.aac')
-    // getPendingSessions picks up 'uploading' status
-    setSessionStatus('sess-crash', 'uploading')
+    setSessionStatus('sess-crash', 'uploading')  // simulate upload-in-progress at time of crash
 
     // Only chunks 1 and 2 need upload (chunk 0 is already 'uploaded', filtered out)
     mockFetch
