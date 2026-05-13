@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Alert } from 'react-native'
+import { Alert, Platform } from 'react-native'
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo'
 import * as SecureStore from 'expo-secure-store'
 import { StatusBar } from 'expo-status-bar'
@@ -9,6 +9,7 @@ import RootNavigator from './navigation/RootNavigator'
 import { getIncompleteSession, setSessionStatus } from './stores/upload-queue'
 import { useRecordingStore } from './stores/recording-store'
 import { runUploadManager } from './services/upload-manager'
+import { registerForPushNotifications } from './services/notifications'
 
 // ---------------------------------------------------------------------------
 // Sentry — initialize before any rendering
@@ -98,6 +99,31 @@ function AppInner() {
       if (state.isConnected) triggerUpload()
     })
     return () => unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    async function registerPush() {
+      const token = await registerForPushNotifications()
+      if (!token) return
+      const authToken = await getToken()
+      if (!authToken) return
+      try {
+        await fetch(
+          `${process.env.EXPO_PUBLIC_API_URL ?? 'https://kova.vercel.app'}/api/notifications/register`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ token, platform: Platform.OS }),
+          }
+        )
+      } catch {
+        // Silent — will retry on next app open
+      }
+    }
+    registerPush()
   }, [])
 
   return (
