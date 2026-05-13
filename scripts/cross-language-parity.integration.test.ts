@@ -36,13 +36,80 @@ describe.skipIf(missingEnv.length > 0)('Cross-Language Score Parity Gate', () =>
     bilingual: Array.from({ length: 10 }, (_, i) => `${FIXTURE_DIR}/bi_call_${i + 1}.aac`),
   }
 
-  async function processCallAndGetScore(_audioPath: string): Promise<number> {
-    // TODO: Implement when services are live:
-    // 1. Upload audio to S3 using AWS SDK
-    // 2. Call the worker's processTranscription directly (or via API)
-    // 3. Poll DB until call status = 'scored'
-    // 4. Return the overallScore
-    throw new Error('Not yet implemented — configure services and audio fixtures first')
+  async function processCallAndGetScore(fixturePath: string): Promise<number> {
+    const fs = await import('fs')
+    const path = await import('path')
+    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3')
+
+    // 1. Read audio fixture
+    const audioBuffer = fs.readFileSync(path.resolve(fixturePath))
+
+    // 2. Upload to S3 / R2
+    const s3 = new S3Client({
+      region: process.env.AWS_REGION ?? 'us-east-1',
+      ...(process.env.S3_ENDPOINT ? { endpoint: process.env.S3_ENDPOINT } : {}),
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+      forcePathStyle: !!process.env.S3_ENDPOINT,
+    })
+
+    const sessionId = `parity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const companyId = 'test-company'
+    const s3Key = `audio/${companyId}/${sessionId}/chunk_0.aac`
+
+    await s3.send(new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME ?? 'kova-audio',
+      Key: s3Key,
+      Body: audioBuffer,
+      ContentType: 'audio/aac',
+    }))
+
+    // 3. Trigger upload-complete to enqueue scoring job
+    const apiBase = process.env.API_BASE_URL ?? 'http://localhost:3000'
+    const createRes = await fetch(`${apiBase}/api/calls/upload-complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        callId: sessionId,
+        companyId,
+        techId: 'test-tech',
+        s3Key,
+        durationSec: 600,
+        chunkCount: 1,
+        jobType: 'drain',
+        consentLoggedAt: new Date().toISOString(),
+      }),
+    })
+
+    if (!createRes.ok) {
+      throw new Error(`upload-complete failed: ${createRes.status} ${await createRes.text()}`)
+    }
+
+    const callId = ((await createRes.json()) as { callId: string }).callId
+
+    // 4. Poll for scored status (up to 5 minutes)
+    const deadline = Date.now() + 5 * 60 * 1000
+    while (Date.now() < deadline) {
+      const statusRes = await fetch(`${apiBase}/api/calls/${callId}`)
+      if (statusRes.ok) {
+        const data = (await statusRes.json()) as {
+          call: { status: string }
+          score: { overallScore: number } | null
+        }
+        if (data.call?.status === 'scored' && data.score?.overallScore != null) {
+          return data.score.overallScore
+        }
+        if (data.call?.status === 'failed') {
+          throw new Error(`Call processing failed: ${callId}`)
+        }
+      }
+      await new Promise((r) => setTimeout(r, 5000))
+    }
+
+    throw new Error(`Timed out waiting for score: ${callId}`)
   }
 
   it('scores 50 calls — Spanish avg must be within 10 points of English avg', async () => {
