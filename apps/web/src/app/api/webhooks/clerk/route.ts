@@ -18,7 +18,9 @@ export async function POST(request: NextRequest) {
 
   let evt: WebhookEvent
   try {
-    evt = await verifyWebhook(request)
+    evt = await verifyWebhook(request, {
+      signingSecret: process.env.CLERK_WEBHOOK_SECRET,
+    })
   } catch (err) {
     console.error('[webhook] verification failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
