@@ -196,6 +196,14 @@ export async function stopRecorder(): Promise<{ durationSec: number }> {
   currentSessionId = null
   await stopRecordingForegroundService()
 
+  if (Platform.OS === 'ios') {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+    })
+  }
+
   if (result.status === 'error') {
     console.error('[Recording] Failed to stop recorder:', result.message)
     return { durationSec: 0 }

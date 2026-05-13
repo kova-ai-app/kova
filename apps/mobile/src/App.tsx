@@ -10,7 +10,7 @@ import RootNavigator from './navigation/RootNavigator'
 import { navigationRef } from './navigation/RootNavigator'
 import { getIncompleteSession, setSessionStatus } from './stores/upload-queue'
 import { useRecordingStore } from './stores/recording-store'
-import { runUploadManager } from './services/upload-manager'
+import { triggerUpload } from './services/upload-trigger'
 import { registerForPushNotifications, addCallScoredListener } from './services/notifications'
 import {
   useFonts,
@@ -67,14 +67,9 @@ const queryClient = new QueryClient({
 function AppInner() {
   const { getToken } = useAuth()
 
-  const triggerUpload = async () => {
+  const startUpload = async () => {
     try {
-      const token = await getToken()
-      if (!token) return
-      await runUploadManager({
-        apiBaseUrl: process.env.EXPO_PUBLIC_API_URL ?? 'https://kova.vercel.app',
-        authToken: token,
-      })
+      await triggerUpload(getToken)
     } catch {
       // Silent — will retry on next trigger
     }
@@ -99,9 +94,8 @@ function AppInner() {
           {
             text: 'Upload What Was Recorded',
             onPress: () => {
-              setSessionStatus(incomplete.sessionId, 'uploading')
               useRecordingStore.getState().setStatus('uploading')
-              triggerUpload()
+              void startUpload()
             },
           },
         ]
@@ -109,11 +103,11 @@ function AppInner() {
     }
 
     // Run upload manager on app open
-    triggerUpload()
+    void startUpload()
 
     // Run upload manager on connectivity restored
     const unsubscribe = NetInfo.addEventListener((state) => {
-      if (state.isConnected) triggerUpload()
+      if (state.isConnected) void startUpload()
     })
     return () => unsubscribe()
   }, [])

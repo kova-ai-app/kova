@@ -96,6 +96,7 @@ export default function CallDetailScreen({ route }: Props) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [positionMs, setPositionMs] = useState(0)
   const [durationMs, setDurationMs] = useState(0)
+  const [playbackFinished, setPlaybackFinished] = useState(false)
 
   // Cleanup sound on unmount
   React.useEffect(() => {
@@ -119,7 +120,13 @@ export default function CallDetailScreen({ route }: Props) {
     }
 
     if (soundRef.current) {
-      await soundRef.current.playAsync()
+      if (playbackFinished) {
+        await soundRef.current.setPositionAsync(0)
+        await soundRef.current.replayAsync()
+      } else {
+        await soundRef.current.playAsync()
+      }
+      setPlaybackFinished(false)
       setIsPlaying(true)
       return
     }
@@ -128,6 +135,11 @@ export default function CallDetailScreen({ route }: Props) {
     try {
       const token = await getToken()
       if (!token) return
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      })
       const { url } = await fetchCallAudioUrl(token, callId)
       const { sound } = await Audio.Sound.createAsync(
         { uri: url },
@@ -140,11 +152,13 @@ export default function CallDetailScreen({ route }: Props) {
             if (status.didJustFinish) {
               setIsPlaying(false)
               setPositionMs(0)
+              setPlaybackFinished(true)
             }
           }
         }
       )
       soundRef.current = sound
+      setPlaybackFinished(false)
       setIsPlaying(true)
     } catch {
       Alert.alert('Error', 'Could not load audio. Try again.')

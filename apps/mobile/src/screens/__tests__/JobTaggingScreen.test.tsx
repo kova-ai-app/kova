@@ -1,0 +1,95 @@
+import React from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer'
+import JobTaggingScreen from '../JobTaggingScreen'
+
+const setJobMetadata = vi.fn()
+const setSessionStatus = vi.fn()
+const triggerUpload = vi.fn().mockResolvedValue(undefined)
+const setStatus = vi.fn()
+
+vi.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: 'SafeAreaView',
+}))
+
+vi.mock('../../stores/upload-queue', () => ({
+  setJobMetadata: (...args: unknown[]) => setJobMetadata(...args),
+  setSessionStatus: (...args: unknown[]) => setSessionStatus(...args),
+}))
+
+vi.mock('../../stores/recording-store', () => ({
+  useRecordingStore: (selector: (state: { setStatus: typeof setStatus }) => unknown) =>
+    selector({ setStatus }),
+}))
+
+vi.mock('../../services/upload-trigger', () => ({
+  triggerUpload: (...args: unknown[]) => triggerUpload(...args),
+}))
+
+vi.mock('@clerk/clerk-expo', () => ({
+  useAuth: () => ({ getToken: vi.fn().mockResolvedValue('token-123') }),
+}))
+
+function createProps() {
+  return {
+    navigation: { navigate: vi.fn() },
+    route: { params: { sessionId: 'session-1', callId: 'call-1' } },
+  } as any
+}
+
+afterEach(() => {
+  vi.clearAllMocks()
+})
+
+describe('JobTaggingScreen', () => {
+  it('starts upload immediately after saving metadata', async () => {
+    const props = createProps()
+    let renderer: ReactTestRenderer
+
+    await act(async () => {
+      renderer = TestRenderer.create(<JobTaggingScreen {...props} />)
+    })
+
+    const textarea = renderer!.root.findByProps({ placeholder: 'Any notes about this call...' })
+
+    await act(async () => {
+      textarea.props.onChangeText('  Needs camera scope cleanup  ')
+    })
+
+    const submitButton = renderer!.root.findAllByType('TouchableOpacity')[3]
+
+    await act(async () => {
+      await submitButton.props.onPress()
+    })
+
+    expect(setJobMetadata).toHaveBeenCalledWith('session-1', {
+      jobType: 'drain',
+      notes: 'Needs camera scope cleanup',
+    })
+    expect(triggerUpload).toHaveBeenCalledOnce()
+    expect(setSessionStatus).not.toHaveBeenCalled()
+    expect(setStatus).toHaveBeenCalledWith('uploading')
+    expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
+  })
+
+  it('starts upload immediately when skipped', async () => {
+    const props = createProps()
+    let renderer: ReactTestRenderer
+
+    await act(async () => {
+      renderer = TestRenderer.create(<JobTaggingScreen {...props} />)
+    })
+
+    const skipButton = renderer!.root.findAllByType('TouchableOpacity')[4]
+
+    await act(async () => {
+      await skipButton.props.onPress()
+    })
+
+    expect(setJobMetadata).not.toHaveBeenCalled()
+    expect(triggerUpload).toHaveBeenCalledOnce()
+    expect(setSessionStatus).not.toHaveBeenCalled()
+    expect(setStatus).toHaveBeenCalledWith('uploading')
+    expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
+  })
+})
