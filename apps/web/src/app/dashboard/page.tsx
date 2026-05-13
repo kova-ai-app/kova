@@ -12,8 +12,33 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 
 export default async function DashboardPage() {
-  const { userId } = await auth()
+  const { userId, orgId } = await auth()
   if (!userId) redirect('/sign-in')
+
+  // User is authenticated but has no active Clerk organization yet.
+  // Redirect to sign-in would cause an infinite loop — show onboarding instead.
+  if (!orgId) {
+    return (
+      <div className="max-w-2xl space-y-4">
+        <h1 className="text-2xl font-bold">Welcome to Kova</h1>
+        <Alert>
+          <AlertDescription>
+            Your account isn&apos;t linked to a company yet. Please ask your
+            administrator to invite you to your company&apos;s organization, or{' '}
+            <a
+              href="https://dashboard.clerk.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium underline"
+            >
+              create an organization in Clerk
+            </a>{' '}
+            if you&apos;re setting up a new account.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
 
   let ctx
   try {
