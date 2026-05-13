@@ -15,6 +15,13 @@
       "when": 1778561012467,
       "tag": "0001_workable_joseph",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778870400000,
+      "tag": "0002_schema_restructure",
+      "breakpoints": true
     }
   ]
 }
