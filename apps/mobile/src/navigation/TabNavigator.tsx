@@ -1,3 +1,4 @@
+// apps/mobile/src/navigation/TabNavigator.tsx
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
@@ -7,17 +8,44 @@ import RecordScreen from '../screens/RecordScreen'
 import CallsScreen from '../screens/CallsScreen'
 import ProfileScreen from '../screens/ProfileScreen'
 import type { TabParamList } from './types'
+import { colors, font } from '../theme'
 
 const Tab = createBottomTabNavigator<TabParamList>()
+
+// Shared header style — dark warm, matches web sidebar
+const headerStyle = {
+  backgroundColor: colors.navBg,
+  borderBottomColor: colors.navBorder,
+  borderBottomWidth: 1,
+  elevation: 0,
+  shadowOpacity: 0,
+} as const
+
+const headerTitleStyle = {
+  fontFamily: font.semibold,
+  fontSize: 17,
+  color: colors.textOnDark,
+} as const
 
 export default function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerShown: true,
-        tabBarActiveTintColor: '#2563EB',
         tabBarShowLabel: false,
-        tabBarStyle: { paddingTop: 10 },
+        tabBarActiveTintColor: colors.navActive,
+        tabBarInactiveTintColor: colors.navInactive,
+        tabBarStyle: {
+          backgroundColor: colors.navBg,
+          borderTopColor: colors.navBorder,
+          borderTopWidth: 1,
+          paddingTop: 8,
+          height: 64,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerStyle,
+        headerTitleStyle,
+        headerTintColor: colors.textOnDark,
       }}
     >
       <Tab.Screen
@@ -25,8 +53,8 @@ export default function TabNavigator() {
         component={HomeScreen}
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={28} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
@@ -35,8 +63,8 @@ export default function TabNavigator() {
         component={AskScreen}
         options={{
           title: 'Ask',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'chatbubble' : 'chatbubble-outline'} size={28} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-outline" size={size} color={color} />
           ),
         }}
       />
@@ -45,9 +73,10 @@ export default function TabNavigator() {
         component={RecordScreen}
         options={{
           title: 'Record',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'mic' : 'mic-outline'} size={28} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="mic-outline" size={size} color={color} />
           ),
+          headerShown: false,
         }}
       />
       <Tab.Screen
@@ -55,8 +84,8 @@ export default function TabNavigator() {
         component={CallsScreen}
         options={{
           title: 'Calls',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'list' : 'list-outline'} size={28} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="call-outline" size={size} color={color} />
           ),
         }}
       />
@@ -65,8 +94,8 @@ export default function TabNavigator() {
         component={ProfileScreen}
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={28} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />
