@@ -1,4 +1,4 @@
-import { generateText, Output } from 'ai'
+import { generateObject } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { google } from '@ai-sdk/google'
@@ -132,15 +132,15 @@ export async function analyzeTranscript(
     formatTranscript(segments),
   ].join('\n')
 
-  const result = await generateText({
+  const result = await generateObject({
     model: aiModel,
     system: SYSTEM_PROMPT,
     prompt: userContent,
-    output: Output.object({ schema: LLMResponseSchema }),
+    schema: LLMResponseSchema,
     temperature: 0,
   })
 
-  const parsed = result.output
+  const parsed = result.object
   const tokensIn = result.usage.inputTokens ?? 0
   const tokensOut = result.usage.outputTokens ?? 0
 

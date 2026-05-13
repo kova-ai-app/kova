@@ -137,8 +137,8 @@ describe('transcribeAudio', () => {
       )
     )
     const result = await transcribeAudio(Buffer.from('audio'), 'en')
-    // 20 minutes × $0.0043 = $0.086
-    expect(result.costUsd).toBeCloseTo(0.086, 3)
+    // 20 minutes × $0.0058 = $0.116
+    expect(result.costUsd).toBeCloseTo(0.116, 3)
     expect(result.durationSec).toBe(1200)
   })
 
@@ -189,8 +189,8 @@ describe('transcribeAudio', () => {
       )
     )
     const result = await transcribeAudio(Buffer.from('audio'), 'es')
-    // 5 minutes × $0.0043 = $0.0215
-    expect(result.costUsd).toBeCloseTo(0.0215, 4)
+    // 5 minutes × $0.0058 = $0.029
+    expect(result.costUsd).toBeCloseTo(0.029, 4)
   })
 
   // --- Scenario 9: Bilingual EN→ES ---

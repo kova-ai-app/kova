@@ -2,10 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { TranscriptSegment } from '@kova/shared'
 
 vi.mock('ai', () => ({
-  generateText: vi.fn(),
-  Output: {
-    object: vi.fn().mockReturnValue('__output_object__'),
-  },
+  generateObject: vi.fn(),
 }))
 
 vi.mock('@ai-sdk/openai', () => ({ openai: vi.fn().mockReturnValue('__openai_model__') }))
@@ -18,7 +15,7 @@ vi.mock('@openrouter/ai-sdk-provider', () => ({
   }),
 }))
 
-import { generateText } from 'ai'
+import { generateObject } from 'ai'
 import { analyzeTranscript } from '../lib/llm.js'
 
 function seg(speaker: string, text: string, startSec = 0, endSec = 5): TranscriptSegment {
@@ -33,7 +30,7 @@ const VALID_OUTPUT = {
 }
 
 const MOCK_RESULT = {
-  output: VALID_OUTPUT,
+  object: VALID_OUTPUT,
   usage: { inputTokens: 800, outputTokens: 200 },
 }
 
@@ -42,7 +39,7 @@ describe('analyzeTranscript', () => {
     vi.clearAllMocks()
     process.env.LLM_PROVIDER = 'openai'
     process.env.LLM_MODEL = 'gpt-4o-mini'
-    ;(generateText as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_RESULT)
+    ;(generateObject as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_RESULT)
   })
 
   it('1. returns 4 qualitative dimension scores from a valid LLM response', async () => {
@@ -91,7 +88,7 @@ describe('analyzeTranscript', () => {
   })
 
   it('7. throws when generateText fails', async () => {
-    ;(generateText as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API error: invalid key'))
+    ;(generateObject as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API error: invalid key'))
     await expect(
       analyzeTranscript([seg('speaker_0', 'hello')], 'drain', 'en')
     ).rejects.toThrow('API error')

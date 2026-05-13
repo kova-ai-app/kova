@@ -1,4 +1,4 @@
-import { generateText, Output } from 'ai'
+import { generateObject } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { google } from '@ai-sdk/google'
@@ -80,15 +80,15 @@ export async function extractCustomerInfo(
   const model = process.env.LLM_MODEL ?? 'gpt-4o-mini'
 
   try {
-    const result = await generateText({
+    const result = await generateObject({
       model: resolveModel(provider, model),
       system: EXTRACTION_PROMPT,
       prompt: formatForExtraction(segments),
-      output: Output.object({ schema: CustomerInfoSchema }),
+      schema: CustomerInfoSchema,
       temperature: 0,
     })
 
-    const parsed = result.output
+    const parsed = result.object
     if (!parsed.name && !parsed.phone && !parsed.email && !parsed.address) {
       return null
     }
