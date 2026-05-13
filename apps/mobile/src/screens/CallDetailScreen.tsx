@@ -223,6 +223,37 @@ export default function CallDetailScreen({ route }: Props) {
     segments?: Array<{ speaker: number; text: string; start: number; language?: string }>
   } | null
   const durationMin = Math.round((call.durationSec as number) / 60)
+  const callStatus = call.status as string | undefined
+  const hasTranscript = !!transcript?.segments?.length
+
+  const statusCard =
+    callStatus === 'pending'
+      ? {
+          title: 'Queued for processing',
+          message: 'This call is waiting to be transcribed and scored.',
+          style: styles.processingNotice,
+          titleStyle: styles.processingNoticeTitle,
+          messageStyle: styles.processingNoticeText,
+        }
+      : callStatus === 'processing'
+        ? {
+            title: 'Processing audio',
+            message: 'Transcript and score are still being generated.',
+            style: styles.processingNotice,
+            titleStyle: styles.processingNoticeTitle,
+            messageStyle: styles.processingNoticeText,
+          }
+        : callStatus === 'failed'
+          ? {
+              title: 'Processing failed',
+              message: hasTranscript
+                ? 'Transcript is available, but scoring did not complete.'
+                : 'We could not generate a transcript or score for this call.',
+              style: styles.failureNotice,
+              titleStyle: styles.failureNoticeTitle,
+              messageStyle: styles.failureNoticeText,
+            }
+          : null
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -238,6 +269,13 @@ export default function CallDetailScreen({ route }: Props) {
         <Text style={styles.metaRow}>Type: {(call.jobType as string) ?? 'Unknown'}</Text>
         <Text style={styles.metaRow}>Status: {call.status as string}</Text>
       </View>
+
+      {statusCard ? (
+        <View style={[styles.section, statusCard.style]}>
+          <Text style={[styles.sectionTitle, statusCard.titleStyle]}>{statusCard.title}</Text>
+          <Text style={statusCard.messageStyle}>{statusCard.message}</Text>
+        </View>
+      ) : null}
 
       {/* Score */}
       {score ? (
@@ -285,10 +323,10 @@ export default function CallDetailScreen({ route }: Props) {
       ) : null}
 
       {/* Transcript */}
-      {transcript?.segments && transcript.segments.length > 0 ? (
+      {hasTranscript ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Transcript</Text>
-          {transcript.segments.map((seg, idx) => (
+          {transcript!.segments!.map((seg, idx) => (
             <View key={idx} style={styles.transcriptRow}>
               <Text style={styles.speakerLabel}>
                 {`Speaker ${seg.speaker}${seg.language === 'es' ? '  (ES)' : ''}`}
@@ -446,6 +484,20 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   transcriptText: { fontFamily: font.regular, fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
+  processingNotice: {
+    backgroundColor: colors.warningBg,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+  },
+  processingNoticeTitle: { color: colors.warningLabel, marginBottom: 6 },
+  processingNoticeText: { fontFamily: font.medium, fontSize: 14, color: colors.warningText, lineHeight: 20 },
+  failureNotice: {
+    backgroundColor: colors.dangerBg,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+  },
+  failureNoticeTitle: { color: colors.danger, marginBottom: 6 },
+  failureNoticeText: { fontFamily: font.medium, fontSize: 14, color: colors.danger, lineHeight: 20 },
   audioBtn: {
     backgroundColor: colors.brand,
     borderRadius: radii.lg,

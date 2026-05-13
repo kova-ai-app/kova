@@ -15,15 +15,17 @@ vi.mock('../lib/s3.js', () => ({ downloadChunks: vi.fn() }))
 vi.mock('../lib/deepgram.js', () => ({ transcribeAudio: vi.fn() }))
 vi.mock('../lib/rules/index.js', () => ({ runRules: vi.fn() }))
 vi.mock('../lib/llm.js', () => ({ analyzeTranscript: vi.fn() }))
+vi.mock('../lib/customer-extraction.js', () => ({ extractCustomerInfo: vi.fn().mockResolvedValue(null) }))
 vi.mock('../lib/pricebook.js', () => ({ lookupPrice: vi.fn() }))
 vi.mock('../lib/score-assembly.js', () => ({ assembleScore: vi.fn() }))
 vi.mock('../lib/push.js', () => ({ sendCallScoredNotification: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('../lib/redis.js', () => ({ getRedisClient: vi.fn().mockReturnValue({}) }))
 vi.mock('bullmq', () => ({
-  Worker: vi.fn().mockImplementation(() => ({ on: vi.fn(), close: vi.fn() })),
+  Worker: vi.fn().mockImplementation((_queueName, processor) => ({ on: vi.fn(), close: vi.fn(), processor })),
 }))
 
 import { db } from '@kova/db'
+import { JOB_NAMES } from '@kova/shared'
 import { downloadChunks } from '../lib/s3.js'
 import { transcribeAudio } from '../lib/deepgram.js'
 import { runRules } from '../lib/rules/index.js'
@@ -31,9 +33,19 @@ import { analyzeTranscript } from '../lib/llm.js'
 import { lookupPrice } from '../lib/pricebook.js'
 import { assembleScore } from '../lib/score-assembly.js'
 import { sendCallScoredNotification } from '../lib/push.js'
-import { processTranscription } from '../workers/scoring.js'
+import { processTranscription, scoringWorker } from '../workers/scoring.js'
 
-const MOCK_CALL = { id: 'call-1', companyId: 'co-1', language: 'en', durationSec: 600, jobType: 'drain', techId: 'tech-1' }
+const MOCK_CALL = {
+  id: 'call-1',
+  companyId: 'co-1',
+  language: 'en',
+  durationSec: 600,
+  jobType: 'drain',
+  techId: 'tech-1',
+  status: 'pending',
+  transcriptId: null,
+  scoreId: null,
+}
 
 const MOCK_TRANSCRIPT_RESULT = {
   segments: [
@@ -100,9 +112,13 @@ describe('processTranscription', () => {
         where: vi.fn().mockResolvedValue([MOCK_CALL]),
       }),
     })
-    ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
-    })
+    ;(db.update as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+      set: vi.fn().mockImplementation((val: Record<string, unknown>) => ({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue(val.status === 'processing' ? [{ id: 'call-1' }] : undefined),
+        }),
+      })),
+    }))
     ;(db.insert as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       values: vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([{ id: 'row-1' }]),
@@ -148,7 +164,11 @@ describe('processTranscription', () => {
     const statusUpdates: string[] = []
     const mockSet = vi.fn().mockImplementation((val: Record<string, string>) => {
       if (val.status) statusUpdates.push(val.status)
-      return { where: vi.fn().mockResolvedValue(undefined) }
+      return {
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue(val.status === 'processing' ? [{ id: 'call-1' }] : undefined),
+        }),
+      }
     })
     ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ set: mockSet })
 
@@ -183,7 +203,11 @@ describe('processTranscription', () => {
     const statusUpdates: string[] = []
     const mockSet = vi.fn().mockImplementation((val: Record<string, string>) => {
       if (val.status) statusUpdates.push(val.status)
-      return { where: vi.fn().mockResolvedValue(undefined) }
+      return {
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue(val.status === 'processing' ? [{ id: 'call-1' }] : undefined),
+        }),
+      }
     })
     ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ set: mockSet })
 
@@ -201,6 +225,130 @@ describe('processTranscription', () => {
       totalDurationSec: 600,
     })
     expect(sendCallScoredNotification).toHaveBeenCalled()
+  })
+
+  it('no-ops duplicate jobs when the atomic processing claim loses the race', async () => {
+    ;(db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([MOCK_CALL]),
+      }),
+    })
+    ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    })
+
+    await expect(
+      processTranscription({
+        callId: 'call-1',
+        s3Keys: ['audio/co-1/sess-1/chunk_0.aac'],
+        totalDurationSec: 600,
+      })
+    ).resolves.toBe('skipped')
+
+    expect(db.update).toHaveBeenCalledTimes(1)
+    expect(db.insert).not.toHaveBeenCalled()
+    expect(downloadChunks).not.toHaveBeenCalled()
+    expect(transcribeAudio).not.toHaveBeenCalled()
+    expect(sendCallScoredNotification).not.toHaveBeenCalled()
+  })
+
+  it('no-ops duplicate jobs when call is already scored', async () => {
+    const call = { ...MOCK_CALL, status: 'scored' }
+    ;(db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([call]),
+      }),
+    })
+
+    await expect(
+      processTranscription({
+        callId: 'call-1',
+        s3Keys: ['audio/co-1/sess-1/chunk_0.aac'],
+        totalDurationSec: 600,
+      })
+    ).resolves.toBe('skipped')
+
+    expect(db.update).not.toHaveBeenCalled()
+    expect(db.insert).not.toHaveBeenCalled()
+    expect(downloadChunks).not.toHaveBeenCalled()
+    expect(transcribeAudio).not.toHaveBeenCalled()
+    expect(sendCallScoredNotification).not.toHaveBeenCalled()
+  })
+
+  it('links transcript before final scoring completes while call stays processing', async () => {
+    const updates: Array<Record<string, unknown>> = []
+    const mockSet = vi.fn().mockImplementation((val: Record<string, unknown>) => {
+      updates.push(val)
+      return {
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue(val.status === 'processing' ? [{ id: 'call-1' }] : undefined),
+        }),
+      }
+    })
+    ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ set: mockSet })
+
+    await processTranscription({ callId: 'call-1', s3Keys: [], totalDurationSec: 600 })
+
+    expect(updates[0]).toEqual({ status: 'processing' })
+    expect(updates[1]).toEqual({ transcriptId: expect.any(String) })
+    expect(updates[2]).toEqual({
+      status: 'scored',
+      scoreId: expect.any(String),
+    })
+  })
+
+  it('keeps transcript linked when scoring fails after transcription', async () => {
+    const callState = { ...MOCK_CALL }
+    ;(db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([callState]),
+      }),
+    })
+    ;(runRules as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      throw new Error('Rules exploded')
+    })
+
+    const mockSet = vi.fn().mockImplementation((val: Record<string, unknown>) => {
+      Object.assign(callState, val)
+      return {
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue(val.status === 'processing' ? [{ id: 'call-1' }] : undefined),
+        }),
+      }
+    })
+    ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ set: mockSet })
+
+    await expect(
+      processTranscription({ callId: 'call-1', s3Keys: [], totalDurationSec: 600 })
+    ).rejects.toThrow('Rules exploded')
+
+    expect(callState.transcriptId).toEqual(expect.any(String))
+    expect(callState.status).toBe('failed')
+  })
+
+  it('worker callback reports skipped when processing no-ops', async () => {
+    const processor = (scoringWorker as unknown as {
+      processor: (job: { name: string; data: unknown }) => Promise<{ callId: string; status: string }>
+    }).processor
+
+    ;(db.update as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    })
+
+    await expect(
+      processor({
+        name: JOB_NAMES.SCORE_CALL,
+        data: { callId: 'call-1', s3Keys: ['audio/co-1/sess-1/chunk_0.aac'], totalDurationSec: 600 },
+      })
+    ).resolves.toEqual({ callId: 'call-1', status: 'skipped' })
   })
 
   it('generates feedback from low-scoring LLM dimensions (score 0 or 1)', async () => {

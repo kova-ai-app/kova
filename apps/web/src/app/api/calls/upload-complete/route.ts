@@ -17,6 +17,15 @@ function getScoringQueue(): Queue {
   return scoringQueue
 }
 
+function isDuplicateJobError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'EJOBIDEXISTS'
+  )
+}
+
 export const POST = withErrorHandler(async (request: Request) => {
   const { userId, orgId } = await auth()
   if (!userId || !orgId) {
@@ -66,19 +75,26 @@ export const POST = withErrorHandler(async (request: Request) => {
     .where(and(eq(calls.id, body.callId), eq(calls.companyId, company.id)))
 
   // Enqueue scoring job
-  await getScoringQueue().add(
-    JOB_NAMES.SCORE_CALL,
-    {
-      callId: body.callId,
-      s3Keys: body.s3Keys,
-      totalDurationSec: body.totalDurationSec,
-      jobType: body.jobMetadata?.jobType,
-    },
-    {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 5000 },
+  try {
+    await getScoringQueue().add(
+      JOB_NAMES.SCORE_CALL,
+      {
+        callId: body.callId,
+        s3Keys: body.s3Keys,
+        totalDurationSec: body.totalDurationSec,
+        jobType: body.jobMetadata?.jobType,
+      },
+      {
+        jobId: body.callId,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+      }
+    )
+  } catch (error) {
+    if (!isDuplicateJobError(error)) {
+      throw error
     }
-  )
+  }
 
   return NextResponse.json({ callId: body.callId, status: 'pending' }, { status: 202 })
 })

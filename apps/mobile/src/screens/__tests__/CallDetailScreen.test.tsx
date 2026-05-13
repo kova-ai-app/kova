@@ -15,6 +15,7 @@ const mockReplayAsync = vi.fn().mockResolvedValue(undefined)
 const mockSetPositionAsync = vi.fn().mockResolvedValue(undefined)
 const mockUnloadAsync = vi.fn().mockResolvedValue(undefined)
 let playbackStatusUpdate: ((status: any) => void) | undefined
+let currentCallDetailData: any
 
 vi.mock('@clerk/clerk-expo', () => ({
   useAuth: () => ({ getToken: mockGetToken }),
@@ -78,6 +79,25 @@ function createProps() {
   } as any
 }
 
+function createCallDetailData(overrides?: Partial<any>) {
+  return {
+    call: {
+      id: 'call-1',
+      recordedAt: '2026-05-12T10:00:00.000Z',
+      durationSec: 120,
+      status: 'scored',
+      jobType: 'drain',
+      s3Key: 'audio/key.aac',
+      ...overrides?.call,
+    },
+    score: null,
+    opportunities: [],
+    feedback: [],
+    transcript: null,
+    ...overrides,
+  }
+}
+
 type TestTextNode = { props: { children: unknown } }
 type TestTouchableNode = { findAllByType: (type: string) => TestTextNode[]; props: { onPress: () => Promise<void> | void } }
 
@@ -95,20 +115,8 @@ async function renderScreen() {
 beforeEach(() => {
   vi.clearAllMocks()
   playbackStatusUpdate = undefined
-  mockFetchCall.mockResolvedValue({
-    call: {
-      id: 'call-1',
-      recordedAt: '2026-05-12T10:00:00.000Z',
-      durationSec: 120,
-      status: 'scored',
-      jobType: 'drain',
-      s3Key: 'audio/key.aac',
-    },
-    score: null,
-    opportunities: [],
-    feedback: [],
-    transcript: null,
-  })
+  currentCallDetailData = createCallDetailData()
+  mockFetchCall.mockImplementation(() => Promise.resolve(currentCallDetailData))
   mockFetchCallAudioUrl.mockResolvedValue({ url: 'https://signed.example/audio.aac' })
 })
 
@@ -168,5 +176,81 @@ describe('CallDetailScreen audio playback', () => {
     expect(mockReplayAsync).toHaveBeenCalledOnce()
     expect(mockPlayAsync).not.toHaveBeenCalled()
     expect(mockSetPositionAsync).toHaveBeenCalledWith(0)
+  })
+})
+
+describe('CallDetailScreen processing states', () => {
+  it('shows queued messaging while a call is pending processing', async () => {
+    currentCallDetailData = createCallDetailData({
+      call: { status: 'pending' },
+    })
+
+    const renderer = await renderScreen()
+
+    expect(() => renderer.root.findByProps({ children: 'Queued for processing' })).not.toThrow()
+    expect(() =>
+      renderer.root.findByProps({ children: 'This call is waiting to be transcribed and scored.' })
+    ).not.toThrow()
+  })
+
+  it('shows active processing messaging while audio is being analyzed', async () => {
+    currentCallDetailData = createCallDetailData({
+      call: { status: 'processing' },
+    })
+
+    const renderer = await renderScreen()
+
+    expect(() => renderer.root.findByProps({ children: 'Processing audio' })).not.toThrow()
+    expect(() =>
+      renderer.root.findByProps({ children: 'Transcript and score are still being generated.' })
+    ).not.toThrow()
+  })
+
+  it('shows transcript plus a failure notice when processing failed after transcription', async () => {
+    currentCallDetailData = createCallDetailData({
+      call: { status: 'failed' },
+      transcript: {
+        segments: [{ speaker: 1, text: 'Customer explained the issue.', start: 0 }],
+      },
+    })
+
+    const renderer = await renderScreen()
+
+    expect(() => renderer.root.findByProps({ children: 'Processing failed' })).not.toThrow()
+    expect(() =>
+      renderer.root.findByProps({ children: 'Transcript is available, but scoring did not complete.' })
+    ).not.toThrow()
+    expect(() => renderer.root.findByProps({ children: 'Transcript' })).not.toThrow()
+    expect(() => renderer.root.findByProps({ children: 'Customer explained the issue.' })).not.toThrow()
+  })
+
+  it('shows a failure message when processing fails without a transcript', async () => {
+    currentCallDetailData = createCallDetailData({
+      call: { status: 'failed' },
+      transcript: null,
+    })
+
+    const renderer = await renderScreen()
+
+    expect(() => renderer.root.findByProps({ children: 'Processing failed' })).not.toThrow()
+    expect(() =>
+      renderer.root.findByProps({ children: 'We could not generate a transcript or score for this call.' })
+    ).not.toThrow()
+    expect(renderer.root.findAllByProps({ children: 'Transcript' })).toHaveLength(0)
+  })
+
+  it('renders the transcript when available before scoring finishes', async () => {
+    currentCallDetailData = createCallDetailData({
+      call: { status: 'processing' },
+      transcript: {
+        segments: [{ speaker: 2, text: 'We can still review this transcript.', start: 3 }],
+      },
+    })
+
+    const renderer = await renderScreen()
+
+    expect(() => renderer.root.findByProps({ children: 'Transcript' })).not.toThrow()
+    expect(() => renderer.root.findByProps({ children: 'We can still review this transcript.' })).not.toThrow()
+    expect(() => renderer.root.findByProps({ children: 'Processing audio' })).not.toThrow()
   })
 })

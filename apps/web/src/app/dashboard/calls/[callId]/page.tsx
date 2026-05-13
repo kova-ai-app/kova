@@ -60,6 +60,14 @@ const DISPUTE_REASONS = [
   { value: 'other', label: 'Other' },
 ]
 
+async function fetchOrThrow(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, init)
+  if (!response.ok) {
+    throw new Error(`Request failed (${response.status})`)
+  }
+  return response
+}
+
 export default function CallDetailPage() {
   const { callId } = useParams<{ callId: string }>()
   const queryClient = useQueryClient()
@@ -82,7 +90,7 @@ export default function CallDetailPage() {
 
   const disputeMutation = useMutation({
     mutationFn: ({ oppId, reason }: { oppId: string; reason: string }) =>
-      fetch(`/api/opportunities/${oppId}/dispute`, {
+      fetchOrThrow(`/api/opportunities/${oppId}/dispute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason }),
@@ -100,7 +108,7 @@ export default function CallDetailPage() {
 
   const feedbackMutation = useMutation({
     mutationFn: (text: string) =>
-      fetch(`/api/calls/${callId}/feedback`, {
+      fetchOrThrow(`/api/calls/${callId}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -117,7 +125,7 @@ export default function CallDetailPage() {
 
   const reviewMutation = useMutation({
     mutationFn: (pointId: string) =>
-      fetch(`/api/feedback/${pointId}`, {
+      fetchOrThrow(`/api/feedback/${pointId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -156,6 +164,30 @@ export default function CallDetailPage() {
   }
 
   const { call, customer, score, transcript, opportunities, feedback: feedbackItems } = data
+  const hasTranscript = !!transcript?.segments?.length
+
+  const statusNotice =
+    call.status === 'pending'
+      ? {
+          title: 'Queued for processing',
+          message: 'This call is waiting to be transcribed and scored.',
+          className: 'border-amber-200 bg-amber-50 text-amber-900',
+        }
+      : call.status === 'processing'
+        ? {
+            title: 'Processing audio',
+            message: 'Transcript and score are still being generated.',
+            className: 'border-amber-200 bg-amber-50 text-amber-900',
+          }
+        : call.status === 'failed'
+          ? {
+              title: 'Processing failed',
+              message: hasTranscript
+                ? 'Transcript is available, but scoring did not complete.'
+                : 'We could not generate a transcript or score for this call.',
+              className: 'border-red-200 bg-red-50 text-red-900',
+            }
+          : null
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -193,10 +225,21 @@ export default function CallDetailPage() {
         />
       )}
 
+      {statusNotice && (
+        <Card className={statusNotice.className}>
+          <CardHeader>
+            <CardTitle>{statusNotice.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">{statusNotice.message}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Transcript */}
-      {transcript && (
+      {hasTranscript && (
         <TranscriptViewer
-          segments={transcript.segments}
+          segments={transcript!.segments}
           currentTime={audioTime}
           onSegmentClick={(startSec) => setSeekTo(startSec)}
         />
@@ -269,99 +312,105 @@ export default function CallDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {opportunities.map((opp) => (
-                <div key={opp.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium capitalize">
-                        {opp.type.replace(/_/g, ' ')}
-                      </span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {formatMoneyRange(opp.valueLow, opp.valueHigh)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {opp.triggered && !opp.offered && !opp.disputeReason && (
-                        <Badge variant="destructive">Missed</Badge>
-                      )}
-                      {opp.triggered && opp.offered && (
-                        <Badge>Offered</Badge>
-                      )}
-                      {opp.disputeReason && (
-                        <Badge variant="outline">Disputed</Badge>
-                      )}
-                    </div>
-                  </div>
+              {opportunities.map((opp) => {
+                const isMissedOpportunity = opp.triggered && !opp.offered && !opp.disputeReason
 
-                  {opp.clipStartSec != null && (
-                    <button
-                      onClick={() => setSeekTo(opp.clipStartSec!)}
-                      className="text-xs text-brand-600 mt-1 hover:underline"
-                    >
-                      Jump to {formatDuration(Math.round(opp.clipStartSec))}
-                    </button>
-                  )}
+                return (
+                  <div key={opp.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium capitalize">
+                          {opp.type.replace(/_/g, ' ')}
+                        </span>
+                        <span className="text-sm text-muted-foreground ml-2">
+                          {formatMoneyRange(opp.valueLow, opp.valueHigh)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isMissedOpportunity && (
+                          <Badge variant="destructive">Missed</Badge>
+                        )}
+                        {opp.triggered && opp.offered && (
+                          <Badge>Offered</Badge>
+                        )}
+                        {opp.disputeReason && (
+                          <Badge variant="outline">Disputed</Badge>
+                        )}
+                      </div>
+                    </div>
 
-                  {/* Dispute dialog */}
-                  {!opp.disputeReason && (
-                    <Dialog
-                      open={disputeOppId === opp.id}
-                      onOpenChange={(open) => {
-                        if (!open) {
-                          setDisputeOppId(null)
-                          setDisputeReason('')
-                        }
-                      }}
-                    >
-                      <DialogTrigger>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-2"
-                          onClick={() => setDisputeOppId(opp.id)}
+                    {opp.clipStartSec != null && (
+                      <button
+                        onClick={() => setSeekTo(opp.clipStartSec!)}
+                        className="text-xs text-brand-600 mt-1 hover:underline"
+                      >
+                        Jump to {formatDuration(Math.round(opp.clipStartSec))}
+                      </button>
+                    )}
+
+                    {/* Dispute dialog */}
+                    {isMissedOpportunity && (
+                      <Dialog
+                        open={disputeOppId === opp.id}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            setDisputeOppId(null)
+                            setDisputeReason('')
+                          }
+                        }}
+                      >
+                        <DialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="mt-2"
+                              onClick={() => setDisputeOppId(opp.id)}
+                            />
+                          }
                         >
                           Dispute
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Dispute Opportunity</DialogTitle>
-                        </DialogHeader>
-                        <Select
-                          value={disputeReason}
-                          onValueChange={(v) => setDisputeReason(v ?? '')}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select reason" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DISPUTE_REASONS.map((r) => (
-                              <SelectItem key={r.value} value={r.value}>
-                                {r.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          onClick={() =>
-                            disputeMutation.mutate({
-                              oppId: opp.id,
-                              reason: disputeReason,
-                            })
-                          }
-                          disabled={
-                            !disputeReason || disputeMutation.isPending
-                          }
-                        >
-                          {disputeMutation.isPending
-                            ? 'Submitting...'
-                            : 'Submit Dispute'}
-                        </Button>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
-              ))}
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Dispute Opportunity</DialogTitle>
+                          </DialogHeader>
+                          <Select
+                            value={disputeReason}
+                            onValueChange={(v) => setDisputeReason(v ?? '')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select reason" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DISPUTE_REASONS.map((r) => (
+                                <SelectItem key={r.value} value={r.value}>
+                                  {r.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            onClick={() =>
+                              disputeMutation.mutate({
+                                oppId: opp.id,
+                                reason: disputeReason,
+                              })
+                            }
+                            disabled={
+                              !disputeReason || disputeMutation.isPending
+                            }
+                          >
+                            {disputeMutation.isPending
+                              ? 'Submitting...'
+                              : 'Submit Dispute'}
+                          </Button>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>

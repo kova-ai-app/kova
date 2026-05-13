@@ -29,7 +29,7 @@ export const GET = withErrorHandler(async (
       : Promise.resolve([]),
     call.transcriptId
       ? db.select().from(transcripts).where(eq(transcripts.id, call.transcriptId))
-      : Promise.resolve([]),
+      : db.select().from(transcripts).where(eq(transcripts.callId, call.id)),
     call.scoreId
       ? db.select().from(opportunities).where(eq(opportunities.scoreId, call.scoreId))
       : Promise.resolve([]),

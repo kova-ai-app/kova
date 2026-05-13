@@ -28,7 +28,7 @@ export async function processTranscription(payload: {
   s3Keys: string[]
   totalDurationSec: number
   jobType?: string
-}): Promise<void> {
+}): Promise<'scored' | 'skipped'> {
   const { callId, s3Keys } = payload
 
   // Step 1: Fetch call from DB
@@ -40,6 +40,7 @@ export async function processTranscription(payload: {
       language: calls.language,
       durationSec: calls.durationSec,
       jobType: calls.jobType,
+      status: calls.status,
     })
     .from(calls)
     .where(eq(calls.id, callId))
@@ -48,8 +49,22 @@ export async function processTranscription(payload: {
     throw new Error(`Call not found: ${callId}`)
   }
 
-  // Step 2: Mark call as processing
-  await db.update(calls).set({ status: 'processing' }).where(eq(calls.id, callId))
+  if (call.status === 'processing' || call.status === 'scored') {
+    logger.info({ callId, status: call.status }, 'Call already being processed or completed — skipping duplicate job')
+    return 'skipped'
+  }
+
+  // Step 2: Atomically claim the call for processing based on the status we observed.
+  const claimed = await db
+    .update(calls)
+    .set({ status: 'processing' })
+    .where(and(eq(calls.id, callId), eq(calls.status, call.status)))
+    .returning({ id: calls.id })
+
+  if (claimed.length === 0) {
+    logger.info({ callId, status: call.status }, 'Call claim lost to another worker — skipping duplicate job')
+    return 'skipped'
+  }
 
   try {
     // Step 3: Download audio chunks from S3
@@ -74,6 +89,11 @@ export async function processTranscription(payload: {
         model: 'nova-3-multilingual',
       })
       .returning({ id: transcripts.id })
+
+    await db
+      .update(calls)
+      .set({ transcriptId })
+      .where(eq(calls.id, callId))
 
     // Step 6: Write transcription processing cost
     await db.insert(processingCosts).values({
@@ -218,10 +238,10 @@ export async function processTranscription(payload: {
       }
     }
 
-    // Step 13: Mark call as scored, link transcript + score
+    // Step 13: Mark call as scored and link score
     await db
       .update(calls)
-      .set({ status: 'scored', transcriptId, scoreId })
+      .set({ status: 'scored', scoreId })
       .where(eq(calls.id, callId))
 
     logger.info(
@@ -235,6 +255,8 @@ export async function processTranscription(payload: {
     } catch (err) {
       logger.warn({ err, callId }, 'Push notification failed — non-fatal')
     }
+
+    return 'scored'
   } catch (err) {
     await db.update(calls).set({ status: 'failed' }).where(eq(calls.id, callId))
     throw err
@@ -256,9 +278,9 @@ export const scoringWorker = new Worker(
     const payload = ScoringJobPayloadSchema.parse(job.data)
     logger.info({ callId: payload.callId }, 'Processing scoring job')
 
-    await processTranscription(payload)
+    const status = await processTranscription(payload)
 
-    return { callId: payload.callId, status: 'scored' }
+    return { callId: payload.callId, status }
   },
   {
     connection: getRedisClient(),

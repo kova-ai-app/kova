@@ -199,6 +199,30 @@ Default (if env vars unset): `openai` / `gpt-4o-mini`.
 - **Seeding test data:** `pnpm db:seed` (inserts Drain Right test company + 5 users + pricebook)
 - **Mobile development:** `pnpm --filter @kova/mobile dev` (starts Expo dev server)
 
+### Worker backlog recovery
+
+The scoring worker must remain continuously running in production. If it is down, uploaded calls stay `pending` and never advance.
+
+- Check worker status: `flyctl status -a kova-worker`
+- Check recent worker logs: `flyctl logs -a kova-worker --no-tail`
+- Inspect queue counts from the existing BullMQ setup:
+
+```bash
+pnpm --filter @kova/worker exec node --input-type=module --import=tsx/esm -e "import { Queue } from 'bullmq'; import { QUEUE_NAMES } from '@kova/shared'; const queue = new Queue(QUEUE_NAMES.SCORING, { connection: { url: process.env.REDIS_URL } }); const counts = await queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed'); console.log(counts); await queue.close();"
+```
+
+Backlog symptom to recognize:
+
+- calls are stuck `pending`
+- no transcript is attached
+- queue shows `waiting > 0` and `active = 0`
+
+Post-deploy verification:
+
+- worker logs include `Worker ready. Waiting for jobs...`
+- queue counts show waiting jobs being consumed after a new upload
+- a fresh call progresses `pending -> processing -> scored`
+
 ---
 
 ## License
