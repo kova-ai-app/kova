@@ -8,6 +8,7 @@ import {
   IOSAudioQuality,
   FlacCompressionLevel,
 } from 'react-native-audio-api'
+import { Audio } from 'expo-av'
 import RNFS from 'react-native-fs'
 import { startRecordingForegroundService, stopRecordingForegroundService } from './foreground-service'
 import { v4 as uuidv4 } from 'uuid'
@@ -92,6 +93,18 @@ export async function startRecorder(sessionId: string): Promise<void> {
   if (recorder !== null) {
     throw new Error('Recorder already active')
   }
+
+  // On iOS, playConsentTone() uses AudioContext which sets AVAudioSession to
+  // Playback mode (inputChannels=0). Reset the session to PlayAndRecord so
+  // the recorder can access the microphone.
+  if (Platform.OS === 'ios') {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+    })
+  }
+
   currentSessionId = sessionId
   chunkIndex = 0
 
