@@ -53,7 +53,14 @@ function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
         }}
       >
         {isSignedIn ? (
-          <Stack.Screen name="Main" component={TabNavigator} />
+          <>
+            <Stack.Screen name="Main" component={TabNavigator} />
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{ title: 'Settings', headerShown: true }}
+            />
+          </>
         ) : (
           <Stack.Screen name="SignIn" component={SignInScreen} />
         )}
@@ -66,11 +73,6 @@ function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
           name="CallDetail"
           component={CallDetailScreen}
           options={{ title: 'Call Detail', headerShown: true }}
-        />
-        <Stack.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{ title: 'Settings', headerShown: true }}
         />
       </Stack.Navigator>
     </NavigationContainer>
