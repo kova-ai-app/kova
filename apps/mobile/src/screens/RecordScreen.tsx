@@ -21,6 +21,7 @@ export default function RecordScreen() {
     elapsedSec,
     chunkCount,
     batteryLevel,
+    error,
     startRecording,
     consentGranted,
     consentDeclined,
@@ -61,6 +62,12 @@ export default function RecordScreen() {
       if (batteryRef.current) clearInterval(batteryRef.current)
     }
   }, [status])
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Recording Error', error)
+    }
+  }, [error])
 
   const { userId: clerkUserId } = useAuth()
   const { organization: clerkOrganization } = useOrganization()
