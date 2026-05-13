@@ -9,7 +9,8 @@ let s3Client: S3Client | null = null
 export function getS3Client(): S3Client {
   if (!s3Client) {
     s3Client = new S3Client({
-      region: process.env.AWS_REGION ?? 'us-east-1',
+      region: process.env.AWS_REGION ?? 'auto',
+      endpoint: process.env.S3_ENDPOINT,
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
