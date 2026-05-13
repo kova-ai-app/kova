@@ -5,10 +5,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  SafeAreaView,
   Animated,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import DeviceInfo from 'react-native-device-info'
+import { colors, font, radii, spacing } from '../theme'
 import { useAuth, useOrganization } from '@clerk/clerk-expo'
 import { useRecordingStore } from '../stores/recording-store'
 import ConsentModal from '../components/ConsentModal'
@@ -167,45 +168,47 @@ export default function RecordScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Dark bg intentional — full-screen recording mode
   container: { flex: 1, backgroundColor: '#111827' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  dot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#EF4444', marginBottom: 24 },
-  timer: { fontSize: 48, fontWeight: '200', color: '#FFFFFF', marginBottom: 8, fontVariant: ['tabular-nums'] },
-  chunkInfo: { fontSize: 14, color: '#6B7280', marginBottom: 32 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  dot: { width: 24, height: 24, borderRadius: radii.full, backgroundColor: '#EF4444', marginBottom: spacing.xl },
+  timer: {
+    fontFamily: font.regular,
+    fontSize: 48,
+    color: '#FFFFFF',
+    marginBottom: spacing.sm,
+    fontVariant: ['tabular-nums'] as any,
+  },
+  chunkInfo: { fontFamily: font.regular, fontSize: 14, color: '#6B7280', marginBottom: spacing.xxl },
   batteryWarning: {
     backgroundColor: '#7C2D12',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.xl,
   },
-  batteryWarningText: { color: '#FEF2F2', fontSize: 14, fontWeight: '600' },
+  batteryWarningText: { fontFamily: font.semibold, color: '#FEF2F2', fontSize: 14 },
   recordButton: {
-    backgroundColor: '#EF4444',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
+    backgroundColor: colors.brand,
+    paddingHorizontal: 40,
+    paddingVertical: 18,
+    borderRadius: radii.full,
   },
-  recordButtonText: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
-  controls: { flexDirection: 'row', gap: 16, marginTop: 32 },
+  recordButtonText: { fontFamily: font.bold, color: '#FFFFFF', fontSize: 18 },
+  controls: { flexDirection: 'row', gap: spacing.lg },
   pauseButton: {
-    backgroundColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#1F2937',
     paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: '#374151',
   },
-  pauseButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  pauseButtonText: { fontFamily: font.semibold, color: '#FFFFFF', fontSize: 16 },
   stopButton: {
-    backgroundColor: '#EF4444',
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#DC2626',
     paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: radii.full,
   },
-  stopButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  stopButtonText: { fontFamily: font.bold, color: '#FFFFFF', fontSize: 16 },
 })
