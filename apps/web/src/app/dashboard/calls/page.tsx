@@ -49,6 +49,8 @@ export default function CallLibraryPage() {
     queryFn: () => safeFetch<Array<{ id: string; name: string }>>('/api/techs'),
   })
 
+  const hasActiveFilters = !!(techId || jobType || status || dateFrom || dateTo)
+
   const resetFilters = () => {
     setTechId('')
     setJobType('')
@@ -164,15 +166,19 @@ export default function CallLibraryPage() {
       ) : data?.data.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground text-center">
-              No calls match your filters.{' '}
-              <button
-                onClick={resetFilters}
-                className="underline font-medium"
-              >
-                Reset filters
-              </button>
-            </p>
+            {hasActiveFilters ? (
+              <p className="text-muted-foreground text-center">
+                No calls match your filters.{' '}
+                <button onClick={resetFilters} className="underline font-medium">
+                  Reset filters
+                </button>
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-center">
+                No calls recorded yet. Ask your team to record their first call
+                — results appear here within 5 minutes.
+              </p>
+            )}
           </CardContent>
         </Card>
       ) : (
