@@ -1,0 +1,16 @@
+node_modules
+.next
+.turbo
+*.log
+.env
+.env.local
+.env*.local
+apps/web/.next
+apps/web/node_modules
+apps/mobile/node_modules
+worker/node_modules
+packages/*/node_modules
+.git
+.github
+docs
+scripts
