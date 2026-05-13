@@ -61,7 +61,8 @@
           "project": "kova-mobile",
           "organization": "kova"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": false
