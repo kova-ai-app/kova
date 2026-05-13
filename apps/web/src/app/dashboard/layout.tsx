@@ -10,14 +10,14 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex h-screen">
-      <aside className="w-64 border-r bg-card flex flex-col">
+      <aside className="w-64 flex flex-col bg-sidebar border-r border-sidebar-border">
         <div className="p-6">
           <Link href="/dashboard" className="block">
-            <span className="text-xl font-bold tracking-tight">Kova</span>
+            <span className="text-2xl font-bold tracking-tight text-sidebar-foreground">Kova</span>
           </Link>
         </div>
         <SidebarNav />
-        <div className="p-4 border-t">
+        <div className="p-4 border-t border-sidebar-border">
           <UserButton />
         </div>
       </aside>

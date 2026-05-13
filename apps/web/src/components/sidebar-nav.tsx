@@ -27,13 +27,13 @@ export function SidebarNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
               isActive
-                ? 'bg-accent text-accent-foreground font-medium'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold border-l-2 border-brand-500'
+                : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" />
+            <Icon className="h-5 w-5 shrink-0" />
             {item.label}
           </Link>
         )

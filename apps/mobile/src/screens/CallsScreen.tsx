@@ -203,13 +203,18 @@ export default function CallsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: '#FAFAF8' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   list: { paddingVertical: 8 },
   row: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rowBody: { marginTop: 4 },
@@ -218,7 +223,7 @@ const styles = StyleSheet.create({
   meta: { fontSize: 13, color: '#6B7280', marginTop: 2 },
   scoreRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   scoreLabel: { fontSize: 12, color: '#6B7280' },
-  scoreValue: { fontSize: 14, fontWeight: '700', color: '#16A34A', marginLeft: 4 },
+  scoreValue: { fontSize: 16, fontWeight: '800', color: '#16A34A', marginLeft: 4 },
   missed: { color: '#DC2626' },
   badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   badgeText: { fontSize: 11, fontWeight: '600', textTransform: 'capitalize' },

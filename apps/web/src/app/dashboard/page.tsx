@@ -125,7 +125,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
       {/* Pricebook completion banner */}
       {summary.pricebookCompletionPct < 70 && (
@@ -144,26 +144,30 @@ export default async function DashboardPage() {
       )}
 
       {/* Hero number */}
-      <Card>
+      <Card className="border-l-4 border-l-brand-500">
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Weekly Opportunity Total
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold">
+          <p className="text-5xl font-semibold tracking-tight">
             {formatMoneyRange(
               summary.opportunityTotalLow,
               summary.opportunityTotalHigh
             )}
           </p>
-          <p className="text-sm mt-1">
-            <span className={trendColor}>
+          <p className="text-sm mt-2 flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+              summary.opportunityChangePct >= 0
+                ? 'bg-green-100 text-green-700'
+                : 'bg-red-100 text-red-700'
+            }`}>
               {trendArrow} {Math.abs(summary.opportunityChangePct)}%
-            </span>{' '}
-            vs last week
+            </span>
+            <span className="text-muted-foreground">vs last week</span>
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-2">
             Since you started: {formatMoney(summary.cumulativeTotal)} identified
           </p>
         </CardContent>
@@ -173,7 +177,7 @@ export default async function DashboardPage() {
       {summary.topOpportunityTypes.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Top Opportunity Types This Week
             </CardTitle>
           </CardHeader>
@@ -192,7 +196,7 @@ export default async function DashboardPage() {
                       {opp.type.replace(/_/g, ' ')}
                     </span>
                   </div>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-semibold">
                     {formatMoney(opp.totalValue)}
                   </span>
                 </div>
@@ -205,7 +209,7 @@ export default async function DashboardPage() {
       {/* Recent calls */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Recent Calls
           </CardTitle>
           <Link
@@ -221,10 +225,10 @@ export default async function DashboardPage() {
               <Link
                 key={call.id}
                 href={`/dashboard/calls/${call.id}`}
-                className="flex items-center justify-between py-2 hover:bg-accent rounded-lg px-2 -mx-2 transition-colors"
+                className="flex items-center justify-between py-2.5 hover:bg-accent rounded-lg px-2 -mx-2 transition-colors"
               >
                 <div>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-semibold">
                     {call.techName ?? 'Unknown'}
                   </span>
                   {call.customerName && (
