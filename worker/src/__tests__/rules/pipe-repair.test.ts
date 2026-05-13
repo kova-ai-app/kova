@@ -102,4 +102,93 @@ describe('PipeRepairRule', () => {
     expect(result?.clipStartSec).toBe(60)
     expect(result?.clipEndSec).toBe(70)
   })
+
+  it('11. Multiple EN triggers strengthen evidence', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The pipe is cracked and the corroded pipe section is bad'),
+      seg('speaker_1', 'Also it looks like a bellied pipe further down'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
+
+  it('12. Partial word does not false-positive: "pipeline" ≠ pipe repair trigger', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'The pipeline for this neighborhood was built in 1980'),
+      seg('speaker_1', 'Interesting'),
+    ]))
+    expect(result?.triggered).toBe(false)
+  })
+
+  it('13. Mixed bilingual: EN trigger in mostly-ES call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'La tubería principal parece bien', 0, 20),
+      seg('speaker_0', 'But I see a cracked pipe in this section', 20, 45),
+      seg('speaker_1', 'Ah sí, ya veo', 45, 55),
+    ]))
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('14. Alternate EN offer: "pipe rehabilitation" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The pipe is deteriorating and has pipe corrosion'),
+      seg('speaker_0', 'Pipe rehabilitation would be the right approach here'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('15. Alternate EN offer: "trenchless repair" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'There is a collapsed pipe in the back'),
+      seg('speaker_0', 'Good news — we can do trenchless repair to fix that'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('16. ES offer: "reparación sin zanja" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'La tubería está agrietada aquí'),
+      seg('speaker_0', 'Podemos hacer una reparación sin zanja para arreglarlo'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('17. jobType=null — pipe-repair rule still evaluates', () => {
+    const result = rule.evaluate(ctx(
+      [seg('speaker_1', 'I see a broken pipe and corroded pipe section')],
+      { jobType: null as any }
+    ))
+    expect(result).not.toBeNull()
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('18. Clip timestamp at startSec=0', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The cracked pipe is visible right at the start', 0, 12),
+      seg('speaker_0', 'I see it', 12, 20),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(0)
+  })
+
+  it('19. Clip timestamp late in call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'Everything else is okay', 0, 400),
+      seg('speaker_1', 'Actually I noticed a bellied pipe at the end of the run', 530, 570),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(530)
+  })
+
+  it('20. ES trigger only — Spanish missed opportunity', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Hay una tubería deteriorada y además tubería con grieta en ese tramo', 0, 25),
+      seg('speaker_0', 'Voy a revisarla', 25, 40),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
 })

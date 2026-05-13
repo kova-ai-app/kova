@@ -103,4 +103,93 @@ describe('WaterHeaterRule', () => {
     expect(result?.clipStartSec).toBe(30)
     expect(result?.clipEndSec).toBe(41)
   })
+
+  it('11. Multiple EN triggers strengthen evidence', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'There is no hot water and the water heater is old'),
+      seg('speaker_1', 'Plus the hot water runs out really fast'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
+
+  it('12. Partial word does not false-positive: "waterfall" ≠ water heater trigger', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'They have a decorative waterfall feature here'),
+      seg('speaker_1', 'Looks nice'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(false)
+  })
+
+  it('13. Mixed bilingual: EN trigger in mostly-ES call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Todo se ve bien por aquí', 0, 20),
+      seg('speaker_0', 'But there is no hot water coming out of this tap', 20, 45),
+      seg('speaker_1', 'Ah sí, lo veo', 45, 55),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('14. Alternate EN offer: "tankless water heater" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The water heater is old and rusty water is coming out'),
+      seg('speaker_0', 'A tankless water heater would solve this permanently'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('15. Alternate EN offer: "water heater installation" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'There is not enough hot water in this house'),
+      seg('speaker_0', 'I can quote you a water heater installation today'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('16. ES offer: "calentador sin tanque" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'No hay agua caliente y el calentador es muy viejo'),
+      seg('speaker_0', 'Un calentador sin tanque sería la solución perfecta'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('17. jobType=null — water-heater rule still evaluates', () => {
+    const result = rule.evaluate(ctx(
+      [seg('speaker_1', 'There is no hot water and the water heater is leaking')],
+      { jobType: null as any }
+    ))
+    expect(result).not.toBeNull()
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('18. Clip timestamp at startSec=0', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'No hot water at all, the water heater is old', 0, 12),
+      seg('speaker_0', 'Let me take a look', 12, 25),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(0)
+  })
+
+  it('19. Clip timestamp late in call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'The plumbing looks okay overall', 0, 380),
+      seg('speaker_1', 'Actually the water heater is leaking at the bottom', 510, 550),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(510)
+  })
+
+  it('20. ES trigger only — Spanish missed opportunity', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'No hay agua caliente y hay poca agua caliente disponible', 0, 25),
+      seg('speaker_0', 'Lo reviso', 25, 40),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
 })

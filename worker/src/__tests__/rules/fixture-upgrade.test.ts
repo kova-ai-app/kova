@@ -102,4 +102,93 @@ describe('FixtureUpgradeRule', () => {
     expect(result?.clipStartSec).toBe(12)
     expect(result?.clipEndSec).toBe(22)
   })
+
+  it('11. Multiple EN triggers strengthen evidence', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The dripping faucet in the kitchen is bad'),
+      seg('speaker_1', 'And the old faucet in the bathroom is also dripping'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
+
+  it('12. Partial word does not false-positive: "fixed" ≠ fixture trigger', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'The issue was fixed last week'),
+      seg('speaker_1', 'Great to hear'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(false)
+  })
+
+  it('13. Mixed bilingual: EN trigger in mostly-ES call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Los baños están bien', 0, 20),
+      seg('speaker_0', 'But the kitchen has a dripping faucet here', 20, 45),
+      seg('speaker_1', 'Sí, lo noto', 45, 55),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('14. Alternate EN offer: "new showerhead" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The showerhead dripping has been going on for months'),
+      seg('speaker_0', 'A new showerhead would solve that easily'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('15. Alternate EN offer: "toilet upgrade" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The running toilet is wasting a lot of water'),
+      seg('speaker_0', 'A toilet upgrade to a low-flow model is what you need'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('16. ES offer: "grifería nueva" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'El grifo que gotea en la cocina es un problema'),
+      seg('speaker_0', 'Le puedo instalar grifería nueva hoy mismo'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('17. jobType=null — fixture-upgrade rule still evaluates', () => {
+    const result = rule.evaluate(ctx(
+      [seg('speaker_1', 'The dripping faucet and old faucet need attention')],
+      { jobType: null as any }
+    ))
+    expect(result).not.toBeNull()
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('18. Clip timestamp at startSec=0', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Dripping faucet right when I walked in', 0, 10),
+      seg('speaker_0', 'I see it', 10, 20),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(0)
+  })
+
+  it('19. Clip timestamp late in call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'Everything checks out', 0, 360),
+      seg('speaker_1', 'Actually the running toilet just started again at the end', 490, 530),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(490)
+  })
+
+  it('20. ES trigger only — Spanish missed opportunity', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'El grifo que gotea y la grifería vieja del baño son problemas', 0, 25),
+      seg('speaker_0', 'Revisaré todo', 25, 40),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
 })
