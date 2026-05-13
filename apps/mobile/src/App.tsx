@@ -12,6 +12,14 @@ import { getIncompleteSession, setSessionStatus } from './stores/upload-queue'
 import { useRecordingStore } from './stores/recording-store'
 import { runUploadManager } from './services/upload-manager'
 import { registerForPushNotifications, addCallScoredListener } from './services/notifications'
+import {
+  useFonts,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans'
 
 // ---------------------------------------------------------------------------
 // Sentry — initialize before any rendering
@@ -146,19 +154,29 @@ function AppInner() {
 
   return (
     <>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       <RootNavigator />
     </>
   )
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  })
+
+  if (!fontsLoaded) return null
+
   if (!CLERK_KEY) {
     // Clerk not configured — show scaffold without upload manager
     return (
       <QueryClientProvider client={queryClient}>
         <>
-          <StatusBar style="auto" />
+          <StatusBar style="light" />
           <RootNavigator />
         </>
       </QueryClientProvider>
