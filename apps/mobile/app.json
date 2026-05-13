@@ -18,7 +18,10 @@
       "bundleIdentifier": "com.kovaapp.mobile",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Kova records service calls to help your team improve revenue.",
-        "NSBackgroundModes": ["audio", "remote-notification"]
+        "NSBackgroundModes": [
+          "audio",
+          "remote-notification"
+        ]
       },
       "buildNumber": "1"
     },
@@ -51,7 +54,6 @@
           "iosDisplayInForeground": true
         }
       ],
-      "@notifee/react-native",
       [
         "@sentry/react-native/expo",
         {
@@ -66,9 +68,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "be7029e9-0e98-4f49-a7ae-42eb8b185d82"
       }
     },
-    "owner": "kova-ai-app"
+    "owner": "kova-ai"
   }
 }
