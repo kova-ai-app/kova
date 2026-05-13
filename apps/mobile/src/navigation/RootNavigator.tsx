@@ -1,6 +1,5 @@
-import React, { useEffect, useRef } from 'react'
-import { NavigationContainer } from '@react-navigation/native'
-import type { NavigationContainerRef } from '@react-navigation/native'
+import React, { useEffect } from 'react'
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useAuth } from '@clerk/clerk-expo'
 import TabNavigator from './TabNavigator'
@@ -9,6 +8,8 @@ import JobTaggingScreen from '../screens/JobTaggingScreen'
 import CallDetailScreen from '../screens/CallDetailScreen'
 import { useRecordingStore } from '../stores/recording-store'
 import type { RootStackParamList } from './types'
+
+export const navigationRef = createNavigationContainerRef<RootStackParamList>()
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 const IS_CLERK_CONFIGURED = !!process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
@@ -22,19 +23,18 @@ function AuthenticatedRoot() {
 }
 
 function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
-  const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null)
   const status = useRecordingStore((s) => s.status)
   const sessionId = useRecordingStore((s) => s.sessionId)
   const callId = useRecordingStore((s) => s.callId)
 
   useEffect(() => {
-    if (status === 'stopped' && sessionId && callId && navRef.current) {
-      navRef.current.navigate('JobTagging', { sessionId, callId })
+    if (status === 'stopped' && sessionId && callId && navigationRef.isReady()) {
+      navigationRef.navigate('JobTagging', { sessionId, callId })
     }
   }, [status, sessionId, callId])
 
   return (
-    <NavigationContainer ref={navRef}>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isSignedIn ? (
           <Stack.Screen name="Main" component={TabNavigator} />

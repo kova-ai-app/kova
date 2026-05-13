@@ -6,10 +6,11 @@ import { StatusBar } from 'expo-status-bar'
 import * as Sentry from '@sentry/react-native'
 import NetInfo from '@react-native-community/netinfo'
 import RootNavigator from './navigation/RootNavigator'
+import { navigationRef } from './navigation/RootNavigator'
 import { getIncompleteSession, setSessionStatus } from './stores/upload-queue'
 import { useRecordingStore } from './stores/recording-store'
 import { runUploadManager } from './services/upload-manager'
-import { registerForPushNotifications } from './services/notifications'
+import { registerForPushNotifications, addCallScoredListener } from './services/notifications'
 
 // ---------------------------------------------------------------------------
 // Sentry — initialize before any rendering
@@ -124,6 +125,15 @@ function AppInner() {
       }
     }
     registerPush()
+  }, [])
+
+  useEffect(() => {
+    const subscription = addCallScoredListener((callId) => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('CallDetail', { callId })
+      }
+    })
+    return () => subscription.remove()
   }, [])
 
   return (
