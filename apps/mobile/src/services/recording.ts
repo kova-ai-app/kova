@@ -1,5 +1,13 @@
 import { Platform, PermissionsAndroid } from 'react-native'
-import { AudioContext } from 'react-native-audio-api'
+import {
+  AudioContext,
+  AudioRecorder,
+  FileFormat,
+  FileDirectory,
+  BitDepth,
+  IOSAudioQuality,
+  FlacCompressionLevel,
+} from 'react-native-audio-api'
 import RNFS from 'react-native-fs'
 import { startRecordingForegroundService, stopRecordingForegroundService } from './foreground-service'
 import { v4 as uuidv4 } from 'uuid'
@@ -9,11 +17,11 @@ import { addChunk } from '../stores/upload-queue'
 // Recording service — wraps react-native-audio-api AudioRecorder
 // ---------------------------------------------------------------------------
 
-const CHUNK_DURATION_MS = 5 * 60 * 1000 // 5 minutes
 const MIN_FREE_BYTES = 200 * 1024 * 1024  // 200 MB
+// ~5 min of 32kbps mono AAC ≈ 1.2 MB
+const ROTATION_BYTES = 1_200_000
 
-let audioContext: InstanceType<typeof AudioContext> | null = null
-let recorder: any = null
+let recorder: AudioRecorder | null = null
 let currentSessionId: string | null = null
 let chunkIndex = 0
 
@@ -87,75 +95,72 @@ export async function startRecorder(sessionId: string): Promise<void> {
   currentSessionId = sessionId
   chunkIndex = 0
 
-  audioContext = new AudioContext({
-    sampleRate: 44100,
-    latencyHint: 'balanced',
-  } as any)
+  recorder = new AudioRecorder()
 
-  recorder = (audioContext as any).createAudioRecorder({
-    bitRate: 32000,
-    sampleRate: 44100,
-    channels: 1,
-    format: 'aac',
-    rotationInterval: CHUNK_DURATION_MS,
-    outputDirectory: RNFS.DocumentDirectoryPath,
-    fileNamePrefix: `call_${sessionId}_chunk_`,
-    onFileRotation: (filePath: string, durationSec: number) => {
-      handleChunkRotation(filePath, durationSec)
+  const fileResult = recorder.enableFileOutput({
+    format: FileFormat.M4A,
+    preset: {
+      bitRate: 32000,
+      sampleRate: 44100,
+      bitDepth: BitDepth.Bit16,
+      iosQuality: IOSAudioQuality.Low,
+      flacCompressionLevel: FlacCompressionLevel.L0,
     },
+    channelCount: 1,
+    directory: FileDirectory.Document,
+    subDirectory: 'Kova',
+    fileNamePrefix: `call_${sessionId}_chunk_`,
+    rotateIntervalBytes: ROTATION_BYTES,
   })
 
-  await recorder.start()
+  if (fileResult.status === 'error') {
+    recorder = null
+    throw new Error(fileResult.message)
+  }
+
+  const startResult = recorder.start()
+  if (startResult.status === 'error') {
+    recorder = null
+    throw new Error(startResult.message)
+  }
+
   await startRecordingForegroundService()
 }
 
-function handleChunkRotation(filePath: string, durationSec: number): void {
-  if (!currentSessionId) return
-  RNFS.stat(filePath)
-    .then((stat: { size: number }) => {
-      addChunk(currentSessionId!, {
-        chunkId: uuidv4(),
-        chunkIndex: chunkIndex++,
-        filePath,
-        sizeBytes: stat.size,
-        durationSec,
-      })
-    })
-    .catch(() => {
-      addChunk(currentSessionId!, {
-        chunkId: uuidv4(),
-        chunkIndex: chunkIndex++,
-        filePath,
-        sizeBytes: Math.round(durationSec * 4000), // ~32kbps estimate
-        durationSec,
-      })
-    })
-}
-
 export async function stopRecorder(): Promise<{ durationSec: number }> {
-  if (!audioContext || !currentSessionId) return { durationSec: 0 }
+  if (!recorder || !currentSessionId) return { durationSec: 0 }
 
-  const result = await recorder?.stop()
-  recorder = null
+  const result = recorder.stop()
   await stopRecordingForegroundService()
 
-  if (result?.filePath && result?.durationSec > 0) {
-    handleChunkRotation(result.filePath, result.durationSec)
+  if (result.status === 'success' && result.paths.length > 0) {
+    const durationPerChunk = result.duration / result.paths.length
+    // size is in MB, convert to bytes
+    const sizePerChunk = Math.round((result.size * 1024 * 1024) / result.paths.length)
+
+    for (const filePath of result.paths) {
+      addChunk(currentSessionId!, {
+        chunkId: uuidv4(),
+        chunkIndex: chunkIndex++,
+        filePath,
+        sizeBytes: sizePerChunk,
+        durationSec: durationPerChunk,
+      })
+    }
   }
 
-  await audioContext.close()
-  audioContext = null
-  const totalDuration = result?.totalDurationSec ?? 0
+  const totalDuration = result.status === 'success' ? result.duration : 0
+  recorder = null
   currentSessionId = null
   return { durationSec: totalDuration }
 }
 
 export async function pauseRecorder(): Promise<void> {
-  if (!audioContext) return
-  await audioContext.suspend()
+  if (!recorder) return
+  recorder.pause()
 }
 
 export async function resumeRecorder(): Promise<void> {
-  if (!audioContext) return
-  await audioContext.resume()
+  if (!recorder) return
+  recorder.resume()
 }
