@@ -76,7 +76,7 @@ vi.mock('@kova/db', () => ({
   processingCosts: {},
   scores: {},
   opportunities: {},
-  coachingPoints: {},
+  feedback: {},
   pricebookItems: {},
   eq: vi.fn(),
   and: vi.fn(),

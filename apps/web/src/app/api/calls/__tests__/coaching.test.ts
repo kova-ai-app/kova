@@ -7,7 +7,7 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('@kova/db', () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
   calls: {},
-  coachingPoints: {},
+  feedback: {},
 }))
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
@@ -31,12 +31,12 @@ const MANAGER_WITH_COMPANY = {
   error: null,
 }
 
-describe('Coaching API', () => {
+describe('Feedback API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('1. POST /api/calls/:id/coaching creates a coaching note', async () => {
+  it('1. POST /api/calls/:id/coaching creates a feedback note', async () => {
     ;(getAuthWithCompany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
       MANAGER_WITH_COMPANY
     )

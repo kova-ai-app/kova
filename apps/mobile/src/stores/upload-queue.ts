@@ -18,7 +18,6 @@ export interface QueuedSession {
   recordingStartedAt: string
   recordingStoppedAt: string | null
   jobMetadata: {
-    customerName?: string
     jobType: 'drain' | 'plumbing' | 'both'
     notes?: string
   } | null

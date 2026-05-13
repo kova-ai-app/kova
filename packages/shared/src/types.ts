@@ -2,7 +2,7 @@
 // Core TypeScript Types
 // =============================================================================
 
-export type UserRole = 'owner' | 'manager' | 'technician'
+export type UserRole = 'owner' | 'manager' | 'technician' | 'sales'
 export type CallStatus =
   | 'uploading'
   | 'pending'
@@ -179,6 +179,10 @@ export interface Opportunity {
   disputeReason?: string
   disputedAt?: string
   confidence: number
+  soldAmount?: number
+  soldPricebookItemId?: string
+  soldAt?: string
+  soldByUserId?: string
 }
 
 export interface PricebookItem {
@@ -211,7 +215,7 @@ export interface PricebookItemInput {
   ltvYears?: number | null
 }
 
-export interface CoachingPoint {
+export interface Feedback {
   id: string
   callId: string
   techId: string

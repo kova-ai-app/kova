@@ -203,7 +203,7 @@ export default function CallDetailScreen({ route }: Props) {
   const call = data.call as Record<string, unknown>
   const score = data.score as Record<string, unknown> | null
   const opportunities = data.opportunities as Record<string, unknown>[]
-  const coachingPoints = data.coachingPoints as Record<string, unknown>[]
+  const feedbackItems = data.feedback as Record<string, unknown>[]
   const transcript = data.transcript as {
     segments?: Array<{ speaker: number; text: string; start: number; language?: string }>
   } | null
@@ -257,13 +257,13 @@ export default function CallDetailScreen({ route }: Props) {
         </View>
       ) : null}
 
-      {/* Coaching notes (read-only) */}
-      {coachingPoints.length > 0 ? (
+      {/* Feedback notes (read-only) */}
+      {feedbackItems.length > 0 ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Coaching Notes</Text>
-          {coachingPoints.map((cp) => (
-            <View key={cp.id as string} style={styles.coachingRow}>
-              <Text style={styles.coachingText}>{cp.text as string}</Text>
+          <Text style={styles.sectionTitle}>Feedback Notes</Text>
+          {feedbackItems.map((cp) => (
+            <View key={cp.id as string} style={styles.feedbackRow}>
+              <Text style={styles.feedbackText}>{cp.text as string}</Text>
             </View>
           ))}
         </View>
@@ -392,8 +392,8 @@ const styles = StyleSheet.create({
   oppValue: { fontSize: 13, fontWeight: '700', color: '#16A34A' },
   disputeBtn: { marginTop: 4, backgroundColor: '#FEF2F2', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   disputeBtnText: { fontSize: 12, color: '#DC2626', fontWeight: '600' },
-  coachingRow: { paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-  coachingText: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  feedbackRow: { paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  feedbackText: { fontSize: 14, color: '#374151', lineHeight: 20 },
   transcriptRow: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   speakerLabel: {
     fontSize: 11,

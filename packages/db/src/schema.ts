@@ -35,7 +35,7 @@ export const users = pgTable('users', {
     .notNull()
     .references(() => companies.id, { onDelete: 'cascade' }),
   clerkUserId: text('clerk_user_id').notNull().unique(),
-  role: text('role', { enum: ['owner', 'manager', 'technician'] }).notNull().default('technician'),
+  role: text('role', { enum: ['owner', 'manager', 'technician', 'sales'] }).notNull().default('technician'),
   name: text('name').notNull(),
   phone: text('phone'),
   languagePref: text('language_pref', { enum: ['en', 'es', 'unknown'] }).notNull().default('en'),
@@ -155,6 +155,12 @@ export const opportunities = pgTable(
     disputeReason: text('dispute_reason'),
     disputedAt: timestamp('disputed_at'),
     confidence: real('confidence').notNull().default(0),
+    soldAmount: real('sold_amount'),
+    soldPricebookItemId: uuid('sold_pricebook_item_id')
+      .references(() => pricebookItems.id),
+    soldAt: timestamp('sold_at'),
+    soldByUserId: uuid('sold_by_user_id')
+      .references(() => users.id),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => ({
@@ -185,9 +191,9 @@ export const pricebookItems = pgTable('pricebook_items', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
-// ---- coaching_points --------------------------------------------------------
+// ---- feedback ---------------------------------------------------------------
 
-export const coachingPoints = pgTable('coaching_points', {
+export const feedback = pgTable('feedback', {
   id: uuid('id').primaryKey().defaultRandom(),
   callId: uuid('call_id')
     .notNull()
@@ -302,7 +308,7 @@ export const callsRelations = relations(calls, ({ one, many }) => ({
   customer: one(customers, { fields: [calls.customerId], references: [customers.id] }),
   transcript: one(transcripts, { fields: [calls.transcriptId], references: [transcripts.id] }),
   score: one(scores, { fields: [calls.scoreId], references: [scores.id] }),
-  coachingPoints: many(coachingPoints),
+  feedback: many(feedback),
   processingCosts: many(processingCosts),
 }))
 
@@ -316,5 +322,15 @@ export const opportunitiesRelations = relations(opportunities, ({ one }) => ({
   pricebookItem: one(pricebookItems, {
     fields: [opportunities.pricebookItemId],
     references: [pricebookItems.id],
+    relationName: 'estimatedPricebookItem',
+  }),
+  soldPricebookItem: one(pricebookItems, {
+    fields: [opportunities.soldPricebookItemId],
+    references: [pricebookItems.id],
+    relationName: 'soldPricebookItem',
+  }),
+  soldByUser: one(users, {
+    fields: [opportunities.soldByUserId],
+    references: [users.id],
   }),
 }))

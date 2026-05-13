@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db, calls, scores, users, companies } from '@kova/db'
+import { db, calls, scores, users, companies, customers } from '@kova/db'
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import { requireRole } from '@/lib/auth'
 import { withErrorHandler } from '@/lib/api-handler'
@@ -66,7 +66,8 @@ export const GET = withErrorHandler(async (request: Request) => {
         durationSec: calls.durationSec,
         status: calls.status,
         jobType: calls.jobType,
-        customerName: calls.customerName,
+        customerId: calls.customerId,
+        customerName: customers.name,
         overallScore: scores.overallScore,
         opportunityTotalLow: scores.opportunityTotalLow,
         opportunityTotalHigh: scores.opportunityTotalHigh,
@@ -74,6 +75,7 @@ export const GET = withErrorHandler(async (request: Request) => {
       .from(calls)
       .leftJoin(scores, eq(scores.id, calls.scoreId))
       .leftJoin(users, eq(users.id, calls.techId))
+      .leftJoin(customers, eq(customers.id, calls.customerId))
       .where(whereClause)
       .orderBy(desc(calls.recordedAt))
       .limit(PAGE_SIZE)

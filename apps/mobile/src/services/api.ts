@@ -78,7 +78,7 @@ export interface CallDetailResponse {
   score: Record<string, unknown> | null
   transcript: Record<string, unknown> | null
   opportunities: Record<string, unknown>[]
-  coachingPoints: Record<string, unknown>[]
+  feedback: Record<string, unknown>[]
 }
 
 export interface AudioUrlResponse {

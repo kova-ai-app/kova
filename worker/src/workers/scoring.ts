@@ -1,8 +1,8 @@
 import { Worker } from 'bullmq'
 import { v4 as uuidv4 } from 'uuid'
 import { QUEUE_NAMES, JOB_NAMES, ScoringJobPayloadSchema } from '@kova/shared'
-import { db, calls, transcripts, processingCosts, scores, opportunities, coachingPoints } from '@kova/db'
-import { eq } from 'drizzle-orm'
+import { db, calls, transcripts, processingCosts, scores, opportunities, feedback, customers } from '@kova/db'
+import { eq, and } from 'drizzle-orm'
 import { sendCallScoredNotification } from '../lib/push.js'
 import { getRedisClient } from '../lib/redis.js'
 import { createLogger } from '../lib/logger.js'
@@ -10,6 +10,7 @@ import { downloadChunks } from '../lib/s3.js'
 import { transcribeAudio } from '../lib/deepgram.js'
 import { runRules } from '../lib/rules/index.js'
 import { analyzeTranscript } from '../lib/llm.js'
+import { extractCustomerInfo } from '../lib/customer-extraction.js'
 import { lookupPrice } from '../lib/pricebook.js'
 import { assembleScore } from '../lib/score-assembly.js'
 import type { Language, JobType, ScoringDimension } from '@kova/shared'
@@ -82,6 +83,47 @@ export async function processTranscription(payload: {
       tokensOut: null,
       costUsd: transcription.costUsd,
     })
+
+    // Step 6b: Extract customer info from transcript (non-fatal)
+    let customerId: string | undefined
+    try {
+      const customerInfo = await extractCustomerInfo(transcription.segments)
+      if (customerInfo?.name) {
+        // Try to find existing customer by phone within company
+        if (customerInfo.phone) {
+          const [existing] = await db
+            .select({ id: customers.id })
+            .from(customers)
+            .where(and(
+              eq(customers.companyId, call.companyId),
+              eq(customers.phone, customerInfo.phone),
+            ))
+          if (existing) {
+            customerId = existing.id
+          }
+        }
+
+        if (!customerId) {
+          const [newCustomer] = await db
+            .insert(customers)
+            .values({
+              companyId: call.companyId,
+              name: customerInfo.name,
+              phone: customerInfo.phone ?? null,
+              email: customerInfo.email ?? null,
+              address: customerInfo.address ?? null,
+            })
+            .returning({ id: customers.id })
+          customerId = newCustomer.id
+        }
+
+        // Link customer to call
+        await db.update(calls).set({ customerId }).where(eq(calls.id, callId))
+        logger.info({ callId, customerId }, 'Customer linked to call')
+      }
+    } catch (err) {
+      logger.warn({ callId, err }, 'Customer extraction failed — non-fatal')
+    }
 
     // Step 7: Run rules engine
     logger.info({ callId }, 'Running rules engine')
@@ -156,7 +198,7 @@ export async function processTranscription(payload: {
       })
     }
 
-    // Step 12b: Auto-generate coaching points from low LLM scores (0 or 1)
+    // Step 12b: Auto-generate feedback from low LLM scores (0 or 1)
     if (llmAnalysis) {
       const QUAL_DIM_LABELS: Record<string, string> = {
         diagnosis_quality: 'Diagnosis Quality',
@@ -167,7 +209,7 @@ export async function processTranscription(payload: {
 
       for (const qs of llmAnalysis.qualScores) {
         if (qs.score <= 1) {
-          await db.insert(coachingPoints).values({
+          await db.insert(feedback).values({
             callId,
             techId: call.techId,
             text: `${QUAL_DIM_LABELS[qs.dimension] ?? qs.dimension}: ${qs.reasoning}`,

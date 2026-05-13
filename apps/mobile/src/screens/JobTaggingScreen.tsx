@@ -17,14 +17,12 @@ type Props = NativeStackScreenProps<RootStackParamList, 'JobTagging'>
 
 export default function JobTaggingScreen({ navigation, route }: Props) {
   const { sessionId } = route.params
-  const [customerName, setCustomerName] = useState('')
   const [jobType, setJobType] = useState<'drain' | 'plumbing' | 'both'>('drain')
   const [notes, setNotes] = useState('')
   const setStatus = useRecordingStore((s) => s.setStatus)
 
   const handleSubmit = () => {
     setJobMetadata(sessionId, {
-      customerName: customerName.trim() || undefined,
       jobType,
       notes: notes.trim() || undefined,
     })
@@ -44,16 +42,6 @@ export default function JobTaggingScreen({ navigation, route }: Props) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Tag This Call</Text>
         <Text style={styles.subtitle}>Optional — helps track revenue per job type</Text>
-
-        <Text style={styles.label}>Customer Name</Text>
-        <TextInput
-          style={styles.input}
-          value={customerName}
-          onChangeText={setCustomerName}
-          placeholder="e.g. John Smith"
-          placeholderTextColor="#9CA3AF"
-          autoCapitalize="words"
-        />
 
         <Text style={styles.label}>Job Type</Text>
         <View style={styles.segmented}>

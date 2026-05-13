@@ -11,6 +11,7 @@ const CLERK_ROLE_MAP: Record<string, UserRole> = {
   'org:admin': 'owner',
   'org:manager': 'manager',
   'org:member': 'technician',
+  'org:sales': 'sales' as const,
 }
 
 export interface AuthContext {

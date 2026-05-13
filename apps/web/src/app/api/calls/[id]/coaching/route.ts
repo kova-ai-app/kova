@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db, calls, coachingPoints } from '@kova/db'
+import { db, calls, feedback } from '@kova/db'
 import { eq, and } from 'drizzle-orm'
 import { getAuthWithCompany } from '@/lib/auth'
 import { withErrorHandler } from '@/lib/api-handler'
@@ -29,13 +29,13 @@ export const POST = withErrorHandler(async (
   }
 
   const [point] = await db
-    .insert(coachingPoints)
+    .insert(feedback)
     .values({
       callId,
       techId: call.techId,
       text: body.text.trim(),
     })
-    .returning({ id: coachingPoints.id, createdAt: coachingPoints.createdAt })
+    .returning({ id: feedback.id, createdAt: feedback.createdAt })
 
   return NextResponse.json(point, { status: 201 })
 })

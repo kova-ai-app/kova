@@ -39,7 +39,7 @@ vi.mock('@kova/db', () => ({
   scores: {},
   transcripts: {},
   opportunities: { id: 'opp.id', callId: 'opp.callId' },
-  coachingPoints: { id: 'cp.id', callId: 'cp.callId' },
+  feedback: { id: 'cp.id', callId: 'cp.callId' },
   pricebookItems: { id: 'pi.id', companyId: 'pi.companyId', active: 'pi.active' },
   companies: {},
   eq: vi.fn((a, b) => `${String(a)}=${String(b)}`),

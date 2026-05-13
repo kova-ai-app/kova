@@ -31,6 +31,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     chunkCount: number
     jobMetadata: {
       customerName?: string
+      customerId?: string
       jobType?: 'drain' | 'plumbing' | 'both'
       notes?: string
     } | null
@@ -58,7 +59,7 @@ export const POST = withErrorHandler(async (request: Request) => {
       s3Key: body.s3Keys[0],
       durationSec: Math.round(body.totalDurationSec),
       status: 'pending',
-      customerName: body.jobMetadata?.customerName ?? null,
+      customerId: body.jobMetadata?.customerId ?? null,
       jobType: body.jobMetadata?.jobType ?? null,
       notes: body.jobMetadata?.notes ?? null,
     })

@@ -7,7 +7,7 @@ vi.mock('@kova/db', () => ({
   processingCosts: {},
   scores: {},
   opportunities: {},
-  coachingPoints: {},
+  feedback: {},
   pricebookItems: {},
 }))
 vi.mock('drizzle-orm', () => ({ eq: vi.fn(), and: vi.fn() }))
@@ -134,7 +134,7 @@ describe('processTranscription', () => {
       MOCK_LLM_ANALYSIS,
       expect.any(Map),
     )
-    // inserts: transcript + deepgram cost + openai cost + scores + 1 opportunity + 1 coaching point = 6
+    // inserts: transcript + deepgram cost + openai cost + scores + 1 opportunity + 1 feedback = 6
     expect(db.insert).toHaveBeenCalledTimes(6)
   })
 
@@ -203,7 +203,7 @@ describe('processTranscription', () => {
     expect(sendCallScoredNotification).toHaveBeenCalled()
   })
 
-  it('generates coaching points from low-scoring LLM dimensions (score 0 or 1)', async () => {
+  it('generates feedback from low-scoring LLM dimensions (score 0 or 1)', async () => {
     const llmWithLowScores = {
       qualScores: [
         { dimension: 'diagnosis_quality',     score: 0, reasoning: 'Did not explain root cause to customer' },
@@ -233,15 +233,15 @@ describe('processTranscription', () => {
       totalDurationSec: 600,
     })
 
-    // Find coaching point inserts — they have a `text` field containing dimension label + reasoning
-    const coachingInserts = insertedValues.filter(
+    // Find feedback inserts — they have a `text` field containing dimension label + reasoning
+    const feedbackInserts = insertedValues.filter(
       (v) => typeof v.text === 'string' && v.callId === 'call-1' && v.techId === 'tech-1'
     )
-    // 2 low-scoring dimensions (score 0 and 1) → 2 coaching points
-    expect(coachingInserts).toHaveLength(2)
-    expect(coachingInserts[0].text).toContain('Diagnosis Quality')
-    expect(coachingInserts[0].text).toContain('Did not explain root cause')
-    expect(coachingInserts[1].text).toContain('Hydrojet Presentation')
-    expect(coachingInserts[1].text).toContain('Briefly mentioned jetting')
+    // 2 low-scoring dimensions (score 0 and 1) → 2 feedback items
+    expect(feedbackInserts).toHaveLength(2)
+    expect(feedbackInserts[0].text).toContain('Diagnosis Quality')
+    expect(feedbackInserts[0].text).toContain('Did not explain root cause')
+    expect(feedbackInserts[1].text).toContain('Hydrojet Presentation')
+    expect(feedbackInserts[1].text).toContain('Briefly mentioned jetting')
   })
 })

@@ -4,7 +4,7 @@ import { unstable_cache } from 'next/cache'
 import Link from 'next/link'
 import { getAuthContext } from '@/lib/auth'
 import { getDashboardData } from '@/lib/dashboard'
-import { db, companies, calls, scores, users } from '@kova/db'
+import { db, companies, calls, scores, users, customers } from '@kova/db'
 import { eq, desc } from 'drizzle-orm'
 import { formatMoney, formatMoneyRange, formatRelativeTime } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
       durationSec: calls.durationSec,
       status: calls.status,
       jobType: calls.jobType,
-      customerName: calls.customerName,
+      customerName: customers.name,
       overallScore: scores.overallScore,
       opportunityTotalLow: scores.opportunityTotalLow,
       opportunityTotalHigh: scores.opportunityTotalHigh,
@@ -91,6 +91,7 @@ export default async function DashboardPage() {
     .from(calls)
     .leftJoin(scores, eq(scores.id, calls.scoreId))
     .leftJoin(users, eq(users.id, calls.techId))
+    .leftJoin(customers, eq(customers.id, calls.customerId))
     .where(eq(calls.companyId, company.id))
     .orderBy(desc(calls.recordedAt))
     .limit(10)

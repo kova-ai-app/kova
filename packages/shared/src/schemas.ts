@@ -3,7 +3,7 @@ import type { ScoringDimension, OpportunityType } from './types.js'
 
 // ---- Enums ------------------------------------------------------------------
 
-export const UserRoleSchema = z.enum(['owner', 'manager', 'technician'])
+export const UserRoleSchema = z.enum(['owner', 'manager', 'technician', 'sales'])
 export const CallStatusSchema = z.enum([
   'uploading',
   'pending',
@@ -107,7 +107,12 @@ export const DisputeRequestSchema = z.object({
   notes: z.string().optional(),
 })
 
-export const CoachingNoteRequestSchema = z.object({
+export const SoldRequestSchema = z.object({
+  soldAmount: z.number().positive(),
+  soldPricebookItemId: z.string().uuid(),
+})
+
+export const FeedbackRequestSchema = z.object({
   text: z.string().min(1).max(2000),
 })
 

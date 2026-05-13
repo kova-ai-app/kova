@@ -38,17 +38,18 @@ import type {
   Call,
   Score,
   Opportunity,
-  CoachingPoint,
+  Feedback,
   Transcript,
   DimensionScore,
 } from '@kova/shared'
 
 interface CallDetailResponse {
-  call: Call & { customerName?: string; jobType?: string }
+  call: Call & { jobType?: string }
+  customer: { id: string; name: string } | null
   score: Score | null
   transcript: Transcript | null
   opportunities: Opportunity[]
-  coachingPoints: CoachingPoint[]
+  feedback: Feedback[]
 }
 
 const DISPUTE_REASONS = [
@@ -64,7 +65,7 @@ export default function CallDetailPage() {
   const queryClient = useQueryClient()
   const [audioTime, setAudioTime] = useState(0)
   const [seekTo, setSeekTo] = useState<number | null>(null)
-  const [coachingText, setCoachingText] = useState('')
+  const [feedbackText, setFeedbackText] = useState('')
   const [disputeOppId, setDisputeOppId] = useState<string | null>(null)
   const [disputeReason, setDisputeReason] = useState('')
 
@@ -97,26 +98,26 @@ export default function CallDetailPage() {
     },
   })
 
-  const coachingMutation = useMutation({
+  const feedbackMutation = useMutation({
     mutationFn: (text: string) =>
-      fetch(`/api/calls/${callId}/coaching`, {
+      fetch(`/api/calls/${callId}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       }),
     onSuccess: () => {
-      toast.success('Coaching note added')
+      toast.success('Feedback note added')
       queryClient.invalidateQueries({ queryKey: ['call', callId] })
-      setCoachingText('')
+      setFeedbackText('')
     },
     onError: (err: Error) => {
-      toast.error('Failed to add coaching note', { description: err.message })
+      toast.error('Failed to add feedback note', { description: err.message })
     },
   })
 
   const reviewMutation = useMutation({
     mutationFn: (pointId: string) =>
-      fetch(`/api/coaching/${pointId}`, {
+      fetch(`/api/feedback/${pointId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -154,7 +155,7 @@ export default function CallDetailPage() {
     return <p className="text-muted-foreground">Call not found.</p>
   }
 
-  const { call, score, transcript, opportunities, coachingPoints } = data
+  const { call, customer, score, transcript, opportunities, feedback: feedbackItems } = data
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -168,7 +169,7 @@ export default function CallDetailPage() {
         </Link>
         <h1 className="text-2xl font-bold">Call Detail</h1>
         <p className="text-sm text-muted-foreground">
-          {call.customerName ?? 'Unknown customer'} ·{' '}
+          {customer?.name ?? 'Unknown customer'} ·{' '}
           {formatDuration(call.durationSec)} ·{' '}
           {new Date(call.recordedAt).toLocaleDateString()}
           {call.jobType && (
@@ -366,15 +367,15 @@ export default function CallDetailPage() {
         </Card>
       )}
 
-      {/* Coaching Notes */}
+      {/* Feedback Notes */}
       <Card>
         <CardHeader>
-          <CardTitle>Coaching Notes</CardTitle>
+          <CardTitle>Feedback Notes</CardTitle>
         </CardHeader>
         <CardContent>
-          {coachingPoints.length > 0 && (
+          {feedbackItems.length > 0 && (
             <div className="space-y-3 mb-4">
-              {coachingPoints.map((point) => (
+              {feedbackItems.map((point) => (
                 <div key={point.id} className="border rounded-lg p-3">
                   <p className="text-sm">{point.text}</p>
                   {point.managerNote && (
@@ -403,23 +404,23 @@ export default function CallDetailPage() {
           <Separator className="my-4" />
           <div className="flex gap-2">
             <Input
-              value={coachingText}
-              onChange={(e) => setCoachingText(e.target.value)}
-              placeholder="Add a coaching note..."
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="Add a feedback note..."
               className="flex-1"
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && coachingText.trim()) {
-                  coachingMutation.mutate(coachingText)
+                if (e.key === 'Enter' && feedbackText.trim()) {
+                  feedbackMutation.mutate(feedbackText)
                 }
               }}
             />
             <Button
-              onClick={() => coachingMutation.mutate(coachingText)}
+              onClick={() => feedbackMutation.mutate(feedbackText)}
               disabled={
-                !coachingText.trim() || coachingMutation.isPending
+                !feedbackText.trim() || feedbackMutation.isPending
               }
             >
-              {coachingMutation.isPending ? 'Adding...' : 'Add Note'}
+              {feedbackMutation.isPending ? 'Adding...' : 'Add Note'}
             </Button>
           </div>
         </CardContent>

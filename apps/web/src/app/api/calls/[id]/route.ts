@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db, calls, scores, transcripts, opportunities, coachingPoints } from '@kova/db'
+import { db, calls, scores, transcripts, opportunities, feedback, customers } from '@kova/db'
 import { eq, and } from 'drizzle-orm'
 import { getAuthWithCompany } from '@/lib/auth'
 import { withErrorHandler } from '@/lib/api-handler'
@@ -23,7 +23,7 @@ export const GET = withErrorHandler(async (
   }
 
   // Fetch related records in parallel
-  const [scoreRows, transcriptRows, opportunityRows, coachingRows] = await Promise.all([
+  const [scoreRows, transcriptRows, opportunityRows, feedbackRows, customerRows] = await Promise.all([
     call.scoreId
       ? db.select().from(scores).where(eq(scores.id, call.scoreId))
       : Promise.resolve([]),
@@ -33,7 +33,10 @@ export const GET = withErrorHandler(async (
     call.scoreId
       ? db.select().from(opportunities).where(eq(opportunities.scoreId, call.scoreId))
       : Promise.resolve([]),
-    db.select().from(coachingPoints).where(eq(coachingPoints.callId, id)),
+    db.select().from(feedback).where(eq(feedback.callId, id)),
+    call.customerId
+      ? db.select().from(customers).where(eq(customers.id, call.customerId))
+      : Promise.resolve([]),
   ])
 
   return NextResponse.json({
@@ -41,6 +44,7 @@ export const GET = withErrorHandler(async (
     score: scoreRows[0] ?? null,
     transcript: transcriptRows[0] ?? null,
     opportunities: opportunityRows,
-    coachingPoints: coachingRows,
+    feedback: feedbackRows,
+    customer: customerRows[0] ?? null,
   })
 })
