@@ -30,6 +30,10 @@
     "typescript-eslint": "^8.0.0"
   },
   "pnpm": {
+    "overrides": {
+      "@types/react": "19.1.17",
+      "@types/react-dom": "19.1.6"
+    },
     "onlyBuiltDependencies": [
       "@clerk/shared",
       "@sentry/cli",
