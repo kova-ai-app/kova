@@ -23,6 +23,7 @@ export default function JobTaggingScreen({ navigation, route }: Props) {
   const [jobType, setJobType] = useState<'drain' | 'plumbing' | 'both'>('drain')
   const [notes, setNotes] = useState('')
   const setStatus = useRecordingStore((s) => s.setStatus)
+  const reset = useRecordingStore((s) => s.reset)
   const { getToken } = useAuth()
 
   const handleSubmit = async () => {
@@ -31,13 +32,17 @@ export default function JobTaggingScreen({ navigation, route }: Props) {
       notes: notes.trim() || undefined,
     })
     setStatus('uploading')
-    await triggerUpload(getToken)
+    const uploadPromise = triggerUpload(getToken)
+    reset()
+    await uploadPromise
     navigation.navigate('Main')
   }
 
   const handleSkip = async () => {
     setStatus('uploading')
-    await triggerUpload(getToken)
+    const uploadPromise = triggerUpload(getToken)
+    reset()
+    await uploadPromise
     navigation.navigate('Main')
   }
 

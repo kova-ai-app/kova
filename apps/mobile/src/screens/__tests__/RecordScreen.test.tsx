@@ -84,6 +84,19 @@ describe('RecordScreen controls', () => {
     expect(() => renderer.root.findByProps({ children: 'Start Recording' })).toThrow()
   })
 
+  it('shows the start recording button again after handoff enters uploading', () => {
+    mockUseAuth.mockReturnValue({ userId: 'user-1' })
+    mockUseOrganization.mockReturnValue({ organization: { id: 'org-1' } })
+    mockUseRecordingStore.mockReturnValue(
+      createRecordingState({ status: 'uploading', elapsedSec: 42, chunkCount: 1 })
+    )
+
+    const renderer = renderScreen()
+
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start recording' })).toBeTruthy()
+    expect(() => renderer.root.findByProps({ accessibilityLabel: 'Stop recording' })).toThrow()
+  })
+
   it('renders icon-only pause and stop controls while active', () => {
     mockUseAuth.mockReturnValue({ userId: 'user-1' })
     mockUseOrganization.mockReturnValue({ organization: { id: 'org-1' } })

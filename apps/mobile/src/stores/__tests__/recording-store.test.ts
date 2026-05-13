@@ -64,6 +64,46 @@ describe('startRecording', () => {
     await useRecordingStore.getState().startRecording({ techId: 'tech-1', companyId: 'co-1' })
     expect(useRecordingStore.getState().status).toBe('consent_shown')
   })
+
+  it('allows restarting from consent_shown as a fresh start path', async () => {
+    useRecordingStore.setState({
+      status: 'consent_shown',
+      techId: 'tech-1',
+      companyId: 'co-1',
+    })
+
+    await expect(
+      useRecordingStore.getState().startRecording({ techId: 'tech-2', companyId: 'co-2' })
+    ).resolves.toBeUndefined()
+
+    expect(useRecordingStore.getState().status).toBe('consent_shown')
+    expect(useRecordingStore.getState().techId).toBe('tech-2')
+    expect(useRecordingStore.getState().companyId).toBe('co-2')
+  })
+
+  it('clears stale session metadata and progress when starting from a non-active state', async () => {
+    useRecordingStore.setState({
+      status: 'upload_failed',
+      sessionId: 'session-1',
+      callId: 'call-1',
+      techId: 'tech-1',
+      companyId: 'co-1',
+      elapsedSec: 42,
+      chunkCount: 7,
+      error: 'Previous upload failed',
+    })
+
+    await useRecordingStore.getState().startRecording({ techId: 'tech-2', companyId: 'co-2' })
+
+    expect(useRecordingStore.getState().status).toBe('consent_shown')
+    expect(useRecordingStore.getState().sessionId).toBeNull()
+    expect(useRecordingStore.getState().callId).toBeNull()
+    expect(useRecordingStore.getState().error).toBeNull()
+    expect(useRecordingStore.getState().elapsedSec).toBe(0)
+    expect(useRecordingStore.getState().chunkCount).toBe(0)
+    expect(useRecordingStore.getState().techId).toBe('tech-2')
+    expect(useRecordingStore.getState().companyId).toBe('co-2')
+  })
 })
 
 describe('consentGranted', () => {
@@ -95,11 +135,69 @@ describe('stopRecording', () => {
 })
 
 describe('concurrent guard', () => {
+  it('allows startRecording after stop when handoff has advanced to uploading', async () => {
+    await useRecordingStore.getState().startRecording({ techId: 'tech-1', companyId: 'co-1' })
+    await useRecordingStore.getState().consentGranted()
+    await useRecordingStore.getState().stopRecording()
+
+    useRecordingStore.getState().setStatus('uploading')
+
+    await expect(
+      useRecordingStore.getState().startRecording({ techId: 'tech-2', companyId: 'co-2' })
+    ).resolves.toBeUndefined()
+
+    expect(useRecordingStore.getState().status).toBe('consent_shown')
+    expect(useRecordingStore.getState().techId).toBe('tech-2')
+    expect(useRecordingStore.getState().companyId).toBe('co-2')
+  })
+
   it('throws if startRecording called while already recording', async () => {
     await useRecordingStore.getState().startRecording({ techId: 'tech-1', companyId: 'co-1' })
     await useRecordingStore.getState().consentGranted()
     await expect(
       useRecordingStore.getState().startRecording({ techId: 'tech-1', companyId: 'co-1' })
+    ).rejects.toThrow('Recording already active')
+  })
+
+  it('throws if startRecording called while recording is actively in progress', async () => {
+    useRecordingStore.setState({
+      status: 'recording',
+      sessionId: 'session-1',
+      callId: 'call-1',
+      techId: 'tech-1',
+      companyId: 'co-1',
+    })
+
+    await expect(
+      useRecordingStore.getState().startRecording({ techId: 'tech-2', companyId: 'co-2' })
+    ).rejects.toThrow('Recording already active')
+  })
+
+  it('throws if startRecording called while recording is paused', async () => {
+    useRecordingStore.setState({
+      status: 'paused',
+      sessionId: 'session-1',
+      callId: 'call-1',
+      techId: 'tech-1',
+      companyId: 'co-1',
+    })
+
+    await expect(
+      useRecordingStore.getState().startRecording({ techId: 'tech-2', companyId: 'co-2' })
+    ).rejects.toThrow('Recording already active')
+  })
+
+  it('throws if startRecording called while handoff is still stopped', async () => {
+    useRecordingStore.setState({
+      status: 'stopped',
+      sessionId: 'session-1',
+      callId: 'call-1',
+      techId: 'tech-1',
+      companyId: 'co-1',
+    })
+
+    await expect(
+      useRecordingStore.getState().startRecording({ techId: 'tech-2', companyId: 'co-2' })
     ).rejects.toThrow('Recording already active')
   })
 })

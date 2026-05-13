@@ -7,6 +7,7 @@ const setJobMetadata = vi.fn()
 const setSessionStatus = vi.fn()
 const triggerUpload = vi.fn().mockResolvedValue(undefined)
 const setStatus = vi.fn()
+const reset = vi.fn()
 
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: 'SafeAreaView',
@@ -18,8 +19,8 @@ vi.mock('../../stores/upload-queue', () => ({
 }))
 
 vi.mock('../../stores/recording-store', () => ({
-  useRecordingStore: (selector: (state: { setStatus: typeof setStatus }) => unknown) =>
-    selector({ setStatus }),
+  useRecordingStore: (selector: (state: { setStatus: typeof setStatus; reset: typeof reset }) => unknown) =>
+    selector({ setStatus, reset }),
 }))
 
 vi.mock('../../services/upload-trigger', () => ({
@@ -69,6 +70,8 @@ describe('JobTaggingScreen', () => {
     expect(triggerUpload).toHaveBeenCalledOnce()
     expect(setSessionStatus).not.toHaveBeenCalled()
     expect(setStatus).toHaveBeenCalledWith('uploading')
+    expect(reset).toHaveBeenCalledOnce()
+    expect(triggerUpload.mock.invocationCallOrder[0]).toBeLessThan(reset.mock.invocationCallOrder[0])
     expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
   })
 
@@ -90,6 +93,8 @@ describe('JobTaggingScreen', () => {
     expect(triggerUpload).toHaveBeenCalledOnce()
     expect(setSessionStatus).not.toHaveBeenCalled()
     expect(setStatus).toHaveBeenCalledWith('uploading')
+    expect(reset).toHaveBeenCalledOnce()
+    expect(triggerUpload.mock.invocationCallOrder[0]).toBeLessThan(reset.mock.invocationCallOrder[0])
     expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
   })
 })
