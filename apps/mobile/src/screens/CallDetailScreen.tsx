@@ -10,6 +10,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native'
+import { Audio } from 'expo-av'
 import { useAuth } from '@clerk/clerk-expo'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
@@ -90,20 +91,64 @@ export default function CallDetailScreen({ route }: Props) {
     },
   })
 
-  // Fetch audio URL on demand
-  const audioMutation = useMutation({
-    mutationFn: async () => {
+  const soundRef = React.useRef<Audio.Sound | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [positionMs, setPositionMs] = useState(0)
+  const [durationMs, setDurationMs] = useState(0)
+
+  // Cleanup sound on unmount
+  React.useEffect(() => {
+    return () => {
+      soundRef.current?.unloadAsync()
+    }
+  }, [])
+
+  function formatTime(ms: number): string {
+    const totalSec = Math.floor(ms / 1000)
+    const min = Math.floor(totalSec / 60)
+    const sec = totalSec % 60
+    return `${min}:${sec.toString().padStart(2, '0')}`
+  }
+
+  async function togglePlayback() {
+    if (soundRef.current && isPlaying) {
+      await soundRef.current.pauseAsync()
+      setIsPlaying(false)
+      return
+    }
+
+    if (soundRef.current) {
+      await soundRef.current.playAsync()
+      setIsPlaying(true)
+      return
+    }
+
+    // First play — fetch presigned URL and load audio
+    try {
       const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      return fetchCallAudioUrl(token, callId)
-    },
-    onSuccess: (result) => {
-      Alert.alert('Audio URL', result.url.substring(0, 80) + '…')
-    },
-    onError: () => {
+      if (!token) return
+      const { url } = await fetchCallAudioUrl(token, callId)
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true },
+        (status) => {
+          if (status.isLoaded) {
+            setPositionMs(status.positionMillis)
+            setDurationMs(status.durationMillis ?? 0)
+            setIsPlaying(status.isPlaying)
+            if (status.didJustFinish) {
+              setIsPlaying(false)
+              setPositionMs(0)
+            }
+          }
+        }
+      )
+      soundRef.current = sound
+      setIsPlaying(true)
+    } catch {
       Alert.alert('Error', 'Could not load audio. Try again.')
-    },
-  })
+    }
+  }
 
   // Dispute mutation
   const disputeMutation = useMutation({
@@ -244,15 +289,27 @@ export default function CallDetailScreen({ route }: Props) {
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.audioBtn}
-            onPress={() => audioMutation.mutate()}
-            disabled={audioMutation.isPending}
+            onPress={() => void togglePlayback()}
           >
-            {audioMutation.isPending ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.audioBtnText}>▶  Play Recording</Text>
-            )}
+            <Text style={styles.audioBtnText}>
+              {isPlaying ? '⏸  Pause' : '▶  Play Recording'}
+            </Text>
           </TouchableOpacity>
+          {durationMs > 0 ? (
+            <View style={styles.progressContainer}>
+              <View
+                style={[
+                  styles.progressBar,
+                  { width: `${Math.min((positionMs / durationMs) * 100, 100)}%` as any },
+                ]}
+              />
+            </View>
+          ) : null}
+          {durationMs > 0 ? (
+            <Text style={styles.timeText}>
+              {formatTime(positionMs)} / {formatTime(durationMs)}
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -349,6 +406,9 @@ const styles = StyleSheet.create({
   transcriptText: { fontSize: 14, color: '#374151', lineHeight: 20 },
   audioBtn: { backgroundColor: '#2563EB', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   audioBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  progressContainer: { height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, marginTop: 12, overflow: 'hidden' },
+  progressBar: { height: 4, backgroundColor: '#2563EB', borderRadius: 2 },
+  timeText: { fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: 6 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalBox: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 8 },
