@@ -111,79 +111,77 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-8">
       <h1 className="text-2xl font-bold">Settings</h1>
 
-      {/* Company Profile */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Company Profile
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Company Name</label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your company name"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">
-              State
-              <span className="text-xs text-muted-foreground ml-1">
-                (affects consent language)
-              </span>
-            </label>
-            <Select
-              value={state}
-              onValueChange={(v) => setState(v ?? state)}
+      {/* Company Profile — constrained width */}
+      <div className="max-w-2xl">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Company Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Company Name</label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your company name"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                State
+                <span className="text-xs text-muted-foreground ml-1">
+                  (affects consent language)
+                </span>
+              </label>
+              <Select
+                value={state}
+                onValueChange={(v) => setState(v ?? state)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {US_STATES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={() => updateMutation.mutate({ name, state })}
+              disabled={!hasChanges || updateMutation.isPending}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select state" />
-              </SelectTrigger>
-              <SelectContent>
-                {US_STATES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            onClick={() => updateMutation.mutate({ name, state })}
-            disabled={!hasChanges || updateMutation.isPending}
-          >
-            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </CardContent>
-      </Card>
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Team Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Team Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted-foreground mb-4">
+      {/* Team Management — wider section, no Card overflow clipping */}
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm font-medium">Team Management</p>
+          <p className="text-xs text-muted-foreground mt-1">
             Invite technicians, managers, and other team members. Role changes take effect immediately.
           </p>
-          <OrganizationProfile
-            routing="hash"
-            appearance={{
-              elements: {
-                rootBox: 'w-full',
-                cardBox: 'shadow-none border-none',
-              },
-            }}
-          />
-        </CardContent>
-      </Card>
+        </div>
+        <OrganizationProfile
+          routing="hash"
+          appearance={{
+            elements: {
+              rootBox: 'w-full',
+              cardBox: 'shadow-none border-none w-full',
+            },
+          }}
+        />
+      </div>
     </div>
   )
 }
