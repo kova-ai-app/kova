@@ -202,8 +202,8 @@ export default function CallDetailScreen({ route }: Props) {
 
   const call = data.call as Record<string, unknown>
   const score = data.score as Record<string, unknown> | null
-  const opportunities = data.opportunities as Record<string, unknown>[]
-  const feedbackItems = data.feedback as Record<string, unknown>[]
+  const opportunities = (data.opportunities ?? []) as Record<string, unknown>[]
+  const feedbackItems = (data.feedback ?? []) as Record<string, unknown>[]
   const transcript = data.transcript as {
     segments?: Array<{ speaker: number; text: string; start: number; language?: string }>
   } | null

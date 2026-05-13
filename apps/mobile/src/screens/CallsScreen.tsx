@@ -29,8 +29,8 @@ function QueueWidget({ sessions }: { sessions: QueuedSession[] }) {
     <View style={styles.queueWidget}>
       <Text style={styles.queueTitle}>Upload Queue</Text>
       {sessions.map((session) => {
-        const uploaded = session.chunks.filter((c) => c.status === 'uploaded').length
-        const total = session.chunks.length
+      const uploaded = (session.chunks ?? []).filter((c) => c.status === 'uploaded').length
+        const total = (session.chunks ?? []).length
         return (
           <View key={session.sessionId} style={styles.queueRow}>
             <View
