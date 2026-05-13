@@ -102,4 +102,94 @@ describe('PressureRegulatorRule', () => {
     expect(result?.clipStartSec).toBe(40)
     expect(result?.clipEndSec).toBe(52)
   })
+
+  it('11. Multiple EN triggers strengthen evidence', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The high water pressure is causing banging pipes'),
+      seg('speaker_1', 'And the pressure is inconsistent throughout the house'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
+
+  it('12. Partial word does not false-positive: "pressure washing" context mismatch', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'We do pressure washing on the driveway'),
+      seg('speaker_1', 'Looks great'),
+    ], { jobType: 'plumbing' }))
+    // "pressure washing" does not include "high water pressure" or similar pipe-pressure triggers
+    expect(result?.triggered).toBe(false)
+  })
+
+  it('13. Mixed bilingual: EN trigger in mostly-ES call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'El sistema de tuberías se ve bien', 0, 20),
+      seg('speaker_0', 'But the water pressure is too high in this house', 20, 45),
+      seg('speaker_1', 'Sí, la presión está muy alta', 45, 60),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('14. Alternate EN offer: "pressure reducing valve" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The high water pressure is causing damage'),
+      seg('speaker_0', 'A pressure reducing valve will fix this right away'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('15. Alternate EN offer: "prv" abbreviation recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Water hammer is happening every time we open a faucet'),
+      seg('speaker_0', 'Installing a PRV is the right fix for this situation'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('16. ES offer: "válvula reguladora" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'La presión de agua alta está afectando los electrodomésticos'),
+      seg('speaker_0', 'Le recomiendo instalar una válvula reguladora de presión'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('17. jobType=null — pressure-regulator rule still evaluates', () => {
+    const result = rule.evaluate(ctx(
+      [seg('speaker_1', 'The water pressure is too high and pipes are banging')],
+      { jobType: null as any }
+    ))
+    expect(result).not.toBeNull()
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('18. Clip timestamp at startSec=0', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'High water pressure issue noticed right at start', 0, 10),
+      seg('speaker_0', 'Let me check', 10, 20),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(0)
+  })
+
+  it('19. Clip timestamp late in call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'Plumbing looks normal', 0, 350),
+      seg('speaker_1', 'Oh the water hammer just happened — those banging pipes are loud', 520, 560),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(520)
+  })
+
+  it('20. ES trigger only — Spanish missed opportunity', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'La presión de agua alta está muy alta y las tuberías golpeando', 0, 25),
+      seg('speaker_0', 'Lo reviso', 25, 40),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
 })

@@ -102,4 +102,93 @@ describe('WholeHomeRepipingRule', () => {
     expect(result?.clipStartSec).toBe(50)
     expect(result?.clipEndSec).toBe(62)
   })
+
+  it('11. Multiple EN triggers strengthen evidence', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The pipes are old throughout and galvanized pipes are corroding'),
+      seg('speaker_1', 'The whole house pipes need to be evaluated'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
+
+  it('12. Partial word does not false-positive: "pipe wrench" ≠ repiping trigger', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'I used a pipe wrench to tighten the fitting'),
+      seg('speaker_1', 'Good'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(false)
+  })
+
+  it('13. Mixed bilingual: EN trigger in mostly-ES call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'La instalación es bastante nueva en general', 0, 20),
+      seg('speaker_0', 'But the galvanized pipes in the back are corroding badly', 20, 50),
+      seg('speaker_1', 'Ah sí, son muy viejas', 50, 65),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('14. Alternate EN offer: "copper repiping" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The polybutylene pipes are failing throughout the house'),
+      seg('speaker_0', 'Copper repiping is the solution for polybutylene systems'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('15. Alternate EN offer: "full repipe" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'All the pipes are old and the lead pipes are a health concern'),
+      seg('speaker_0', 'A full repipe is the right call for safety'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('16. ES offer: "repipeo completo" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Las tuberías galvanizadas se están corroyendo por toda la casa'),
+      seg('speaker_0', 'Le recomendamos un repipeo completo de la propiedad'),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('17. jobType=null — whole-home-repiping rule still evaluates', () => {
+    const result = rule.evaluate(ctx(
+      [seg('speaker_1', 'The galvanized pipes and lead pipes are a major issue')],
+      { jobType: null as any }
+    ))
+    expect(result).not.toBeNull()
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('18. Clip timestamp at startSec=0', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Galvanized pipes failing right at the start of our inspection', 0, 15),
+      seg('speaker_0', 'I can see that', 15, 25),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(0)
+  })
+
+  it('19. Clip timestamp late in call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'Most of the house looks okay', 0, 340),
+      seg('speaker_1', 'Actually all the pipes are old in this wing at the end', 500, 545),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(500)
+  })
+
+  it('20. ES trigger only — Spanish missed opportunity', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Las tuberías galvanizadas y la tubería de plomo son un peligro', 0, 25),
+      seg('speaker_0', 'Lo anotaré', 25, 40),
+    ], { jobType: 'plumbing' }))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
 })
