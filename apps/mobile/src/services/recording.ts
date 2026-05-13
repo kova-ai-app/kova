@@ -1,5 +1,6 @@
 import { Platform, PermissionsAndroid } from 'react-native'
 import {
+  AudioManager,
   AudioRecorder,
   FileFormat,
   FileDirectory,
@@ -154,6 +155,15 @@ export async function startRecorder(sessionId: string): Promise<void> {
 
   currentSessionId = sessionId
   chunkIndex = 0
+
+  if (Platform.OS === 'ios') {
+    AudioManager.setAudioSessionOptions({
+      iosCategory: 'playAndRecord',
+      iosMode: 'default',
+      iosOptions: ['defaultToSpeaker', 'allowBluetoothHFP'],
+      iosNotifyOthersOnDeactivation: true,
+    })
+  }
 
   recorder = new AudioRecorder()
 

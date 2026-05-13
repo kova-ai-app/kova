@@ -8,6 +8,7 @@ import JobTaggingScreen from '../screens/JobTaggingScreen'
 import CallDetailScreen from '../screens/CallDetailScreen'
 import { useRecordingStore } from '../stores/recording-store'
 import type { RootStackParamList } from './types'
+import { colors, font } from '../theme'
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>()
 
@@ -35,7 +36,21 @@ function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          headerStyle: {
+            backgroundColor: colors.navBg,
+          },
+          headerTitleStyle: {
+            fontFamily: font.semibold,
+            fontSize: 17,
+            color: colors.textOnDark,
+          },
+          headerTintColor: colors.textOnDark,
+          headerShadowVisible: false,
+        }}
+      >
         {isSignedIn ? (
           <Stack.Screen name="Main" component={TabNavigator} />
         ) : (
@@ -44,7 +59,7 @@ function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
         <Stack.Screen
           name="JobTagging"
           component={JobTaggingScreen}
-          options={{ title: 'Tag This Call' }}
+          options={{ title: 'Tag This Call', headerShown: true }}
         />
         <Stack.Screen
           name="CallDetail"
