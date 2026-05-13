@@ -16,10 +16,10 @@ kova/ (monorepo)
 ├── packages/
 │   ├── shared/       ← TypeScript types, Zod schemas, scoring constants
 │   └── db/           ← Drizzle ORM schema + migrations (Neon Postgres)
-└── worker/           ← BullMQ scoring worker (Railway + Redis)
+└── worker/           ← BullMQ scoring worker (Upstash Redis)
 ```
 
-**Data flow:** Mobile → S3 (audio) → Worker (transcribe+score) → Neon → Web
+**Data flow:** Mobile → R2 (audio) → Worker (transcribe+score) → Neon → Web
 
 ---
 
@@ -52,7 +52,7 @@ cp .env.example apps/mobile/.env      # Expo mobile app (EXPO_PUBLIC_* vars)
 pnpm dev
 ```
 
-> Web runs at http://localhost:3000. The worker requires Redis — either provision via Railway (see below) or run locally with Docker: `docker run -d -p 6379:6379 redis:alpine`
+> Web runs at http://localhost:3000. The worker requires Redis — either provision via Upstash (see below) or run locally with Docker: `docker run -d -p 6379:6379 redis:alpine`
 
 ---
 
@@ -64,7 +64,7 @@ pnpm dev
 | `apps/mobile` | Technician app for recording customer calls in the field | Expo SDK 55, React Navigation 7, Clerk |
 | `packages/shared` | Shared TypeScript types, Zod schemas, and scoring constants | TypeScript, Zod |
 | `packages/db` | Database schema, migrations, and seed data | Drizzle ORM, Neon Postgres |
-| `worker` | Background job processor for transcription and AI scoring | BullMQ, Redis, Deepgram, OpenAI |
+| `worker` | Background job processor for transcription and AI scoring | BullMQ, Upstash Redis, Deepgram, Vercel AI SDK |
 
 ---
 
@@ -92,11 +92,11 @@ pnpm dev
 | Web Dashboard | Next.js 15, Tailwind CSS 4, React |
 | Auth | Clerk (with Organizations + phone auth) |
 | Database | Neon Postgres (serverless), Drizzle ORM |
-| Queue | BullMQ + Redis (Railway) |
+| Queue | BullMQ + Upstash Redis |
 | Transcription | Deepgram Nova-3 |
-| AI Scoring | OpenAI GPT-4o |
-| Audio Storage | AWS S3 |
-| Monitoring | Sentry (web + mobile) |
+| AI Scoring | Vercel AI SDK v6 (OpenAI, Anthropic, Google, Groq, OpenRouter — switchable via env vars) |
+| Audio Storage | Cloudflare R2 (S3-compatible) |
+| Monitoring | BetterStack (Sentry-SDK compatible) |
 | CI/CD | GitHub Actions, Vercel (web), EAS (mobile) |
 
 ---
@@ -104,6 +104,18 @@ pnpm dev
 ## Environment Variables
 
 All variables are documented with descriptions in `.env.example`. Copy it to `apps/web/.env.local` for web and `worker/.env` for the worker.
+
+Key variables for the worker:
+
+| Variable | Description |
+|----------|-------------|
+| `LLM_PROVIDER` | LLM provider to use: `openai`, `anthropic`, `google`, `groq`, or `openrouter` |
+| `LLM_MODEL` | Model ID for the chosen provider (e.g. `gpt-4o-mini`, `claude-3-haiku-20240307`) |
+| `OPENAI_API_KEY` | Required when `LLM_PROVIDER=openai` |
+| `ANTHROPIC_API_KEY` | Required when `LLM_PROVIDER=anthropic` |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Required when `LLM_PROVIDER=google` |
+| `GROQ_API_KEY` | Required when `LLM_PROVIDER=groq` |
+| `OPENROUTER_API_KEY` | Required when `LLM_PROVIDER=openrouter` |
 
 ---
 
@@ -131,35 +143,41 @@ All variables are documented with descriptions in `.env.example`. Copy it to `ap
 5. Branches → Create branches: `staging`, `dev`, `test` (each gets its own connection string; use `dev` branch URL for local development, `test` branch URL for CI)
 6. Run initial migration: `pnpm db:migrate`
 
-### Railway (Redis)
+### Upstash (Redis)
 
-1. Create account at https://railway.app
-2. New Project → Add Redis
-3. Redis service → Connect → copy `REDIS_URL`
+1. Create account at https://console.upstash.com
+2. New Database → name it "kova-redis" → region closest to your worker deployment
+3. REST → copy the `REDIS_URL` (use the `rediss://` TLS URL — required by Upstash)
 
-### AWS S3 (Audio Storage)
+### Cloudflare R2 (Audio Storage)
 
-1. Create S3 bucket: `kova-audio-dev` (region: us-east-1, ACL: private, block all public access)
-2. IAM → Users → Create user: `kova-app-user`
-3. Attach inline policy:
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [{
-       "Effect": "Allow",
-       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-       "Resource": "arn:aws:s3:::kova-audio-dev/*"
-     }]
-   }
-   ```
-4. Security credentials → Create access key → copy `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
+1. Create account at https://dash.cloudflare.com
+2. R2 → Create bucket: `kova-audio-dev` (default region)
+3. R2 → Manage R2 API Tokens → Create token with `Object Read & Write` on your bucket
+4. Copy credentials → `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+5. Account Home → copy Account ID → set `AWS_ENDPOINT_URL=https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
+6. Set `AWS_REGION=auto` and `S3_BUCKET_NAME=kova-audio-dev`
 
-### Sentry (Error Monitoring)
+### LLM Provider (AI Scoring)
 
-1. Create account at https://sentry.io
-2. New project → Next.js → name: `kova-web` → copy DSN → `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`
-3. New project → React Native → name: `kova-mobile` → copy DSN → `EXPO_PUBLIC_SENTRY_DSN`
-4. Settings → Auth Tokens → Create token → `SENTRY_AUTH_TOKEN`
+The worker uses [Vercel AI SDK v6](https://sdk.vercel.ai) and supports switching providers without code changes — just set env vars:
+
+| Provider | `LLM_PROVIDER` | `LLM_MODEL` example | Key variable |
+|----------|---------------|---------------------|--------------|
+| OpenAI | `openai` | `gpt-4o-mini` | `OPENAI_API_KEY` |
+| Anthropic | `anthropic` | `claude-3-haiku-20240307` | `ANTHROPIC_API_KEY` |
+| Google | `google` | `gemini-1.5-flash` | `GOOGLE_GENERATIVE_AI_API_KEY` |
+| Groq | `groq` | `llama-3.1-8b-instant` | `GROQ_API_KEY` |
+| OpenRouter | `openrouter` | `openai/gpt-4o-mini` | `OPENROUTER_API_KEY` |
+
+Default (if env vars unset): `openai` / `gpt-4o-mini`.
+
+### BetterStack (Error Monitoring)
+
+1. Create account at https://betterstack.com
+2. Logs → Sources → New source → name: `kova-web` → copy ingest URL → `BETTERSTACK_SOURCE_TOKEN`
+3. Repeat for `kova-worker`
+4. BetterStack is Sentry-SDK compatible — existing `SENTRY_DSN` integrations continue to work
 
 ### Vercel (Web Deployment)
 
@@ -167,7 +185,7 @@ All variables are documented with descriptions in `.env.example`. Copy it to `ap
 2. Add New Project → Import from GitHub → select `kova-ai-app/kova`
 3. Root Directory: `.` (monorepo root)
 4. Framework Preset: Next.js
-5. Environment Variables: add all vars from `.env.example` (Clerk, Neon, AWS, Sentry sections)
+5. Environment Variables: add all vars from `.env.example` (Clerk, Neon, R2, LLM sections)
 6. Deploy
 7. Copy production URL → update `NEXT_PUBLIC_APP_URL`
 8. Add the Vercel URL to Clerk webhook endpoint
