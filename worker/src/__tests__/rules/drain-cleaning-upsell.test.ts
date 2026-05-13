@@ -101,4 +101,95 @@ describe('DrainCleaningUpsellRule', () => {
     expect(result?.clipStartSec).toBe(20)
     expect(result?.clipEndSec).toBe(30)
   })
+
+  it('11. Multiple EN triggers in one call strengthen confidence', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The drain is slow and backing up'),
+      seg('speaker_1', 'Also the sink is slow in the bathroom'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
+
+  it('12. Partial word does not false-positive: "draining" ≠ slow drain trigger', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'We are draining the water heater tank today'),
+      seg('speaker_1', 'Sounds good'),
+    ]))
+    // no real drain-clog triggers → not triggered
+    expect(result?.triggered).toBe(false)
+  })
+
+  it('13. Mixed bilingual call — EN trigger in mostly-ES call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'El sistema funciona bien', 0, 20),
+      seg('speaker_0', 'But I see the drain is backed up here', 20, 40),
+      seg('speaker_1', 'Sí, entiendo', 40, 50),
+    ]))
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('14. Alternate EN offer: "full drain cleaning" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The drain is clogged again'),
+      seg('speaker_0', 'I can do a full drain cleaning for you today'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('15. Alternate EN offer: "drain treatment" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'This drain is slow'),
+      seg('speaker_0', 'We offer a drain treatment to solve the buildup'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('16. ES offer: "limpieza profunda" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'El drenaje está tapado'),
+      seg('speaker_0', 'Le recomiendo una limpieza profunda del drenaje'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('17. jobType=null — drain rule still evaluates (null treated as both)', () => {
+    const result = rule.evaluate(ctx(
+      [seg('speaker_1', 'The drain is slow and not draining')],
+      { jobType: null as any }
+    ))
+    // drain rule should NOT return null for null jobType
+    expect(result).not.toBeNull()
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('18. Clip timestamp captured when trigger is at startSec=0', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The drain is backed up at the start', 0, 10),
+      seg('speaker_0', 'Okay I will check it', 10, 20),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(0)
+  })
+
+  it('19. Clip timestamp captured when trigger is late in the call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'Let me check the system', 0, 300),
+      seg('speaker_1', 'Actually the drain is clogged here at the end', 550, 580),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(550)
+  })
+
+  it('20. ES trigger only (no offer) — Spanish missed opportunity', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'El drenaje está tapado completamente', 0, 20),
+      seg('speaker_0', 'Ya lo destapé, listo', 20, 40),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
 })

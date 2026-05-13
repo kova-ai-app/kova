@@ -1,5 +1,6 @@
 // ---------------------------------------------------------------------------
-// Sentry instrumentation — client-side
+// Next.js client instrumentation file — client-side Sentry init
+// Replaces sentry.client.config.ts (Turbopack compatible)
 // ---------------------------------------------------------------------------
 import * as Sentry from '@sentry/nextjs'
 

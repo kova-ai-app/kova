@@ -102,4 +102,93 @@ describe('HydroJettingRule', () => {
     expect(result?.clipStartSec).toBe(45)
     expect(result?.clipEndSec).toBe(55)
   })
+
+  it('11. Multiple EN triggers strengthen evidence', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'There is grease buildup in the main line'),
+      seg('speaker_1', 'Also a severe clog further down the sewer line'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
+
+  it('12. Partial word does not false-positive: "hydrating" ≠ hydro jet', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'I recommend hydrating the pipes from the outside'),
+      seg('speaker_1', 'Okay'),
+    ]))
+    expect(result?.triggered).toBe(false)
+  })
+
+  it('13. Mixed bilingual: EN trigger in mostly-ES call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Todo se ve bien', 0, 20),
+      seg('speaker_0', 'There is heavy grease buildup in the main line', 20, 50),
+      seg('speaker_1', 'Entendido', 50, 60),
+    ]))
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('14. Alternate EN offer: "water jet" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'The sewer line has roots in the pipe'),
+      seg('speaker_0', 'We can use a water jet to clear it out'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('15. Alternate EN offer: "jet cleaning" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'There is hard buildup causing the recurring blockage'),
+      seg('speaker_0', 'Jet cleaning is the right solution here'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('16. ES offer: "limpieza a alta presión" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Hay acumulación de grasa en la línea principal'),
+      seg('speaker_0', 'Le recomiendo una limpieza a alta presión'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('17. jobType=null — hydro-jetting rule still evaluates', () => {
+    const result = rule.evaluate(ctx(
+      [seg('speaker_1', 'The main line has severe grease buildup')],
+      { jobType: null as any }
+    ))
+    expect(result).not.toBeNull()
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('18. Clip timestamp at startSec=0', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Grease buildup at the start of the call', 0, 10),
+      seg('speaker_0', 'I see it', 10, 20),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(0)
+  })
+
+  it('19. Clip timestamp late in call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'Everything else looks fine', 0, 400),
+      seg('speaker_1', 'Wait, there are roots in the pipe near the end', 540, 580),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(540)
+  })
+
+  it('20. ES trigger only — Spanish missed opportunity', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Hay una obstrucción severa en la línea principal', 0, 25),
+      seg('speaker_0', 'Okay lo reviso', 25, 40),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
 })

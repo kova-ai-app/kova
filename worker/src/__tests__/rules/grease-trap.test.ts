@@ -102,4 +102,93 @@ describe('GreaseTrapRule', () => {
     expect(result?.clipStartSec).toBe(10)
     expect(result?.clipEndSec).toBe(20)
   })
+
+  it('11. Multiple EN triggers strengthen evidence', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'This is a commercial kitchen in the restaurant'),
+      seg('speaker_1', 'And there is cooking grease backing up everywhere'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
+
+  it('12. Partial word does not false-positive: "greasy" ≠ grease trigger context', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'The hands get greasy when working on older pipes'),
+      seg('speaker_1', 'Yeah that happens'),
+    ]))
+    expect(result?.triggered).toBe(false)
+  })
+
+  it('13. Mixed bilingual: EN trigger in mostly-ES call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'El lugar está limpio', 0, 20),
+      seg('speaker_0', 'But this is a food establishment so there is grease in the drain', 20, 50),
+      seg('speaker_1', 'Correcto', 50, 60),
+    ]))
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('14. Alternate EN offer: "grease interceptor" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'This commercial kitchen has lots of cooking grease'),
+      seg('speaker_0', 'You need a grease interceptor installed here'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('15. Alternate EN offer: "fog service" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'There is grease in the drain from the cafeteria'),
+      seg('speaker_0', 'We can set up a fog service to manage this'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('16. ES offer: "trampa de grasa" recognized', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Hay grasa en el drenaje del restaurante'),
+      seg('speaker_0', 'Necesitan instalar una trampa de grasa'),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(true)
+  })
+
+  it('17. jobType=null — grease-trap rule still evaluates', () => {
+    const result = rule.evaluate(ctx(
+      [seg('speaker_1', 'This is a restaurant with grease in the drain')],
+      { jobType: null as any }
+    ))
+    expect(result).not.toBeNull()
+    expect(result?.triggered).toBe(true)
+  })
+
+  it('18. Clip timestamp at startSec=0', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'This is a commercial kitchen with cooking grease issues', 0, 12),
+      seg('speaker_0', 'I see the problem', 12, 20),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(0)
+  })
+
+  it('19. Clip timestamp late in call', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_0', 'The pipes look fine overall', 0, 350),
+      seg('speaker_1', 'Oh wait this is a cafeteria, I see cooking grease buildup', 520, 560),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.clipStartSec).toBe(520)
+  })
+
+  it('20. ES trigger only — Spanish missed opportunity', () => {
+    const result = rule.evaluate(ctx([
+      seg('speaker_1', 'Este es un establecimiento de comida con grasa en el desagüe', 0, 25),
+      seg('speaker_0', 'Entendido, lo reviso', 25, 40),
+    ]))
+    expect(result?.triggered).toBe(true)
+    expect(result?.offered).toBe(false)
+  })
 })
