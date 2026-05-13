@@ -11,6 +11,10 @@ primary_region = "sjc"
 # No public HTTP services — this is a background worker.
 # Bull Board runs on 3001 internally for debugging via `fly proxy 3001`.
 
+[machine]
+  restart_policy = "always"
+  autostop = "off"
+
 [[vm]]
   memory = "256mb"
   cpu_kind = "shared"
