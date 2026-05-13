@@ -17,7 +17,7 @@ export interface TranscriptionResult {
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEEPGRAM_COST_PER_MIN = 0.0043
+const DEEPGRAM_COST_PER_MIN = 0.0058
 
 const DRAIN_PLUMBING_KEYTERMS = [
   'drain cleaning',
@@ -63,7 +63,7 @@ export async function transcribeAudio(
   const { result, error } = await client.listen.prerecorded.transcribeFile(
     audioBuffer,
     {
-      model: 'nova-3-multilingual',
+      model: 'nova-3',
       language: 'multi',
       smart_format: true,
       diarize: true,

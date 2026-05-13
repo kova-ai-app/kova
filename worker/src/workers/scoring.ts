@@ -86,7 +86,7 @@ export async function processTranscription(payload: {
         language: transcription.language,
         werConfidence: transcription.werConfidence,
         provider: 'deepgram',
-        model: 'nova-3-multilingual',
+        model: 'nova-3',
       })
       .returning({ id: transcripts.id })
 
