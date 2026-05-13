@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // --- Mock: Clerk webhook verification ---
@@ -114,8 +114,12 @@ import { verifyWebhook } from '@clerk/nextjs/webhooks'
 describe('Full Onboarding Chain: webhook -> pricebook -> consent -> upload-complete', () => {
   beforeEach(() => {
     ops.length = 0
-    vi.clearAllMocks()
+    vi.clearAllMocks() // clears call history only; vi.resetAllMocks() would clear implementations
     process.env.CLERK_WEBHOOK_SECRET = 'test-secret'
+  })
+
+  afterEach(() => {
+    delete process.env.CLERK_WEBHOOK_SECRET
   })
 
   it('completes the full flow from org creation to scoring enqueue', async () => {
@@ -142,6 +146,8 @@ describe('Full Onboarding Chain: webhook -> pricebook -> consent -> upload-compl
       })
     )
     expect(orgRes.status).toBe(200)
+    const orgBody = await orgRes.json()
+    expect(orgBody).toMatchObject({ received: true })
 
     // --- Step 2: organizationMembership.created webhook ---
     ;(verifyWebhook as any).mockResolvedValueOnce({
@@ -161,6 +167,8 @@ describe('Full Onboarding Chain: webhook -> pricebook -> consent -> upload-compl
       })
     )
     expect(memberRes.status).toBe(200)
+    const memberBody = await memberRes.json()
+    expect(memberBody).toMatchObject({ received: true })
 
     // --- Step 3: Pricebook POST ---
     const { POST: pricebookPost } = await import('../pricebook/route')
@@ -179,6 +187,8 @@ describe('Full Onboarding Chain: webhook -> pricebook -> consent -> upload-compl
       })
     )
     expect(pricebookRes.status).toBe(201)
+    const pricebookBody = await pricebookRes.json()
+    expect(pricebookBody).toMatchObject({ id: 'item-1', name: 'Drain cleaning' })
 
     // --- Step 4: Consent POST ---
     const { POST: consentPost } = await import('../calls/consent/route')
@@ -218,12 +228,14 @@ describe('Full Onboarding Chain: webhook -> pricebook -> consent -> upload-compl
       })
     )
     expect(uploadRes.status).toBe(202)
+    const uploadBody = await uploadRes.json()
+    expect(uploadBody).toMatchObject({ callId: 'call-1' })
 
     // --- Verify full chain produced expected DB operations ---
     const insertCount = ops.filter((o) => o.op === 'insert').length
     const updateCount = ops.filter((o) => o.op === 'update').length
-    // Inserts: org (webhook), user (webhook), pricebook item, consent call = 4
-    expect(insertCount).toBeGreaterThanOrEqual(4)
+    // Inserts: org (webhook), user (webhook), pricebook item, consent call = exactly 4
+    expect(insertCount).toBe(4)
     // Updates: upload-complete sets call status = at least 1
     expect(updateCount).toBeGreaterThanOrEqual(1)
   })
