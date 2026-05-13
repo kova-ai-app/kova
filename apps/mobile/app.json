@@ -32,7 +32,8 @@
         "RECORD_AUDIO",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MICROPHONE",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "POST_NOTIFICATIONS"
       ],
       "versionCode": 1
     },
@@ -40,7 +41,6 @@
       "bundler": "metro"
     },
     "plugins": [
-      "@notifee/react-native",
       [
         "expo-notifications",
         {
@@ -51,6 +51,7 @@
           "iosDisplayInForeground": true
         }
       ],
+      "@notifee/react-native",
       [
         "@sentry/react-native/expo",
         {
