@@ -147,7 +147,7 @@ export default function AskScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: '#FAFAF8' },
 
   // Messages
   messageList: {
@@ -181,12 +181,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E8E3DC',
     flex: 1,
+    // card-level elevation
+    shadowColor: '#1C1917',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   aiText: {
     fontSize: 15,
-    color: '#111827',
+    color: '#1C1917',
     lineHeight: 22,
   },
 
@@ -210,25 +216,28 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Input bar
+  // Input bar — warm bg, soft top shadow instead of hard border
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFAF8',
     gap: 8,
+    shadowColor: '#1C1917',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 4,
   },
   input: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F0EDE8',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#111827',
+    color: '#1C1917',
     maxHeight: 120,
     lineHeight: 20,
   },
@@ -242,6 +251,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   sendButtonDisabled: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#E8E3DC',
   },
 })
