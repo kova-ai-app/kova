@@ -22,6 +22,8 @@ env:
   S3_BUCKET_NAME: "stub"
   DEEPGRAM_API_KEY: "stub"
   OPENAI_API_KEY: "sk-stub"
+  LLM_PROVIDER: "openai"
+  LLM_MODEL: "gpt-4o-mini"
   SENTRY_DSN: ""
   NEXT_PUBLIC_SENTRY_DSN: ""
   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_stub"

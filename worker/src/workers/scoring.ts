@@ -108,7 +108,7 @@ export async function processTranscription(payload: {
       llmAnalysis = await analyzeTranscript(transcription.segments, callJobType, transcription.language)
       await db.insert(processingCosts).values({
         callId,
-        provider: 'openai',
+        provider: llmAnalysis.provider,
         tokensIn: llmAnalysis.tokensIn,
         tokensOut: llmAnalysis.tokensOut,
         costUsd: llmAnalysis.costUsd,

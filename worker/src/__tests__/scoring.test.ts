@@ -59,6 +59,8 @@ const MOCK_LLM_ANALYSIS = {
   tokensIn: 800,
   tokensOut: 200,
   costUsd: 0.0004,
+  provider: 'openai',
+  model: 'gpt-4o-mini',
 }
 
 const MOCK_PRICE_RESULT = {
@@ -212,6 +214,8 @@ describe('processTranscription', () => {
       tokensIn: 800,
       tokensOut: 200,
       costUsd: 0.0004,
+      provider: 'openai',
+      model: 'gpt-4o-mini',
     }
     ;(analyzeTranscript as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(llmWithLowScores)
 

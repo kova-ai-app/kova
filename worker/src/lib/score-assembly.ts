@@ -137,7 +137,7 @@ export function assembleScore(
       ? Math.round(dimensions.reduce((sum, d) => sum + d.score, 0) / dimensions.length)
       : 0
 
-  const modelUsed = llmAnalysis ? 'rules+gpt-4o-mini' : 'rules-v1'
+  const modelUsed = llmAnalysis ? `rules+${llmAnalysis.model}` : 'rules-v1'
   const confidenceLevel: 'high' | 'medium' | 'low' = llmAnalysis ? 'high' : 'medium'
 
   return {

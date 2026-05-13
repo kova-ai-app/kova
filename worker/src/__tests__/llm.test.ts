@@ -1,39 +1,48 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { TranscriptSegment } from '@kova/shared'
 
-vi.mock('openai', () => ({
-  default: vi.fn(),
+vi.mock('ai', () => ({
+  generateText: vi.fn(),
+  Output: {
+    object: vi.fn().mockReturnValue('__output_object__'),
+  },
 }))
 
-import OpenAI from 'openai'
+vi.mock('@ai-sdk/openai', () => ({ openai: vi.fn().mockReturnValue('__openai_model__') }))
+vi.mock('@ai-sdk/anthropic', () => ({ anthropic: vi.fn().mockReturnValue('__anthropic_model__') }))
+vi.mock('@ai-sdk/google', () => ({ google: vi.fn().mockReturnValue('__google_model__') }))
+vi.mock('@ai-sdk/groq', () => ({ groq: vi.fn().mockReturnValue('__groq_model__') }))
+vi.mock('@openrouter/ai-sdk-provider', () => ({
+  createOpenRouter: vi.fn().mockReturnValue({
+    chat: vi.fn().mockReturnValue('__openrouter_model__'),
+  }),
+}))
+
+import { generateText } from 'ai'
 import { analyzeTranscript } from '../lib/llm.js'
 
 function seg(speaker: string, text: string, startSec = 0, endSec = 5): TranscriptSegment {
   return { speaker, text, startSec, endSec, language: 'en', confidence: 0.95 }
 }
 
-const VALID_LLM_JSON = JSON.stringify({
+const VALID_OUTPUT = {
   diagnosis_quality:     { score: 2, reasoning: 'Root cause explained' },
   hydrojet_presentation: { score: 1, reasoning: 'Only snaking mentioned' },
   customer_education:    { score: 3, reasoning: 'Spent time educating' },
   close_quality:         { score: 2, reasoning: 'Two options presented' },
-})
-
-const MOCK_OPENAI_RESPONSE = {
-  choices: [{ message: { content: VALID_LLM_JSON } }],
-  usage: { prompt_tokens: 800, completion_tokens: 200 },
 }
 
-let mockCreate: ReturnType<typeof vi.fn>
+const MOCK_RESULT = {
+  output: VALID_OUTPUT,
+  usage: { inputTokens: 800, outputTokens: 200 },
+}
 
 describe('analyzeTranscript', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockCreate = vi.fn()
-    mockCreate.mockResolvedValue(MOCK_OPENAI_RESPONSE)
-    ;(OpenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
-      chat: { completions: { create: mockCreate } },
-    }))
+    process.env.LLM_PROVIDER = 'openai'
+    process.env.LLM_MODEL = 'gpt-4o-mini'
+    ;(generateText as ReturnType<typeof vi.fn>).mockResolvedValue(MOCK_RESULT)
   })
 
   it('1. returns 4 qualitative dimension scores from a valid LLM response', async () => {
@@ -65,20 +74,58 @@ describe('analyzeTranscript', () => {
     expect(result.costUsd).toBeGreaterThan(0)
   })
 
-  it('4. works for plumbing job type', async () => {
+  it('4. returns provider and model fields', async () => {
+    const result = await analyzeTranscript([seg('speaker_0', 'hello')], 'drain', 'en')
+    expect(result.provider).toBe('openai')
+    expect(result.model).toBe('gpt-4o-mini')
+  })
+
+  it('5. works for plumbing job type', async () => {
     const result = await analyzeTranscript([seg('speaker_0', 'hello')], 'plumbing', 'en')
     expect(result.qualScores).toHaveLength(4)
   })
 
-  it('5. works for Spanish language calls', async () => {
+  it('6. works for Spanish language calls', async () => {
     const result = await analyzeTranscript([seg('speaker_0', 'hola')], 'drain', 'es')
     expect(result.qualScores).toHaveLength(4)
   })
 
-  it('6. throws when OpenAI API call fails', async () => {
-    mockCreate.mockRejectedValue(new Error('OpenAI API error: invalid key'))
+  it('7. throws when generateText fails', async () => {
+    ;(generateText as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API error: invalid key'))
     await expect(
       analyzeTranscript([seg('speaker_0', 'hello')], 'drain', 'en')
-    ).rejects.toThrow('OpenAI API error')
+    ).rejects.toThrow('API error')
+  })
+
+  it('8. non-OpenAI provider returns costUsd=0', async () => {
+    process.env.LLM_PROVIDER = 'anthropic'
+    process.env.LLM_MODEL = 'claude-3-haiku-20240307'
+    const result = await analyzeTranscript([seg('speaker_0', 'hello')], 'drain', 'en')
+    expect(result.costUsd).toBe(0)
+    expect(result.provider).toBe('anthropic')
+  })
+
+  it('9. openrouter provider sets correct provider and model fields', async () => {
+    process.env.LLM_PROVIDER = 'openrouter'
+    process.env.LLM_MODEL = 'openai/gpt-4o-mini'
+    const result = await analyzeTranscript([seg('speaker_0', 'hello')], 'drain', 'en')
+    expect(result.provider).toBe('openrouter')
+    expect(result.model).toBe('openai/gpt-4o-mini')
+    expect(result.costUsd).toBe(0)
+  })
+
+  it('10. unknown provider throws', async () => {
+    process.env.LLM_PROVIDER = 'fakeprovider'
+    await expect(
+      analyzeTranscript([seg('speaker_0', 'hello')], 'drain', 'en')
+    ).rejects.toThrow('Unknown LLM provider')
+  })
+
+  it('11. defaults to openai/gpt-4o-mini when env vars not set', async () => {
+    delete process.env.LLM_PROVIDER
+    delete process.env.LLM_MODEL
+    const result = await analyzeTranscript([seg('speaker_0', 'hello')], 'drain', 'en')
+    expect(result.provider).toBe('openai')
+    expect(result.model).toBe('gpt-4o-mini')
   })
 })

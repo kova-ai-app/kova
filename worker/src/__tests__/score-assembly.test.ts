@@ -24,6 +24,8 @@ const LLM_ALL_TWOS: LLMAnalysis = {
   tokensIn: 800,
   tokensOut: 200,
   costUsd: 0.0004,
+  provider: 'openai',
+  model: 'gpt-4o-mini',
 }
 
 const PRICE_CAMERA: PriceResult = { pricebookItemId: 'pb-1', valueLow: 425, valueHigh: 425, ltvValue: null, isDefaultPrice: false }

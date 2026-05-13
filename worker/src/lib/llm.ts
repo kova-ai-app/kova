@@ -1,4 +1,9 @@
-import OpenAI from 'openai'
+import { generateText, Output } from 'ai'
+import { openai } from '@ai-sdk/openai'
+import { anthropic } from '@ai-sdk/anthropic'
+import { google } from '@ai-sdk/google'
+import { groq } from '@ai-sdk/groq'
+import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { z } from 'zod'
 import type { TranscriptSegment, JobType, Language, QualitativeDimension } from '@kova/shared'
 
@@ -17,14 +22,18 @@ export interface LLMAnalysis {
   tokensIn: number
   tokensOut: number
   costUsd: number
+  provider: string
+  model: string
 }
 
 // ---------------------------------------------------------------------------
-// Cost calculation (GPT-4o-mini rates as of 2025)
+// Cost calculation (OpenAI rates as of 2025)
 // ---------------------------------------------------------------------------
 
-const GPT4O_MINI_INPUT_COST_PER_TOKEN = 0.15 / 1_000_000   // $0.15 / 1M tokens
-const GPT4O_MINI_OUTPUT_COST_PER_TOKEN = 0.60 / 1_000_000  // $0.60 / 1M tokens
+const OPENAI_RATES: Record<string, { input: number; output: number }> = {
+  'gpt-4o-mini': { input: 0.15 / 1_000_000, output: 0.60 / 1_000_000 },
+  'gpt-4o':      { input: 2.50 / 1_000_000, output: 10.00 / 1_000_000 },
+}
 
 // ---------------------------------------------------------------------------
 // Response schema (Zod)
@@ -79,11 +88,31 @@ function formatTranscript(segments: TranscriptSegment[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Provider factory
+// ---------------------------------------------------------------------------
+
+function resolveModel(providerId: string, modelId: string) {
+  switch (providerId) {
+    case 'openai':     return openai(modelId)
+    case 'anthropic':  return anthropic(modelId)
+    case 'google':     return google(modelId)
+    case 'groq':       return groq(modelId)
+    case 'openrouter': {
+      const client = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY })
+      return client.chat(modelId)
+    }
+    default:
+      throw new Error(`Unknown LLM provider: ${providerId}`)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // analyzeTranscript
 // ---------------------------------------------------------------------------
 
 /**
- * Call GPT-4o-mini to score 4 qualitative drain/plumbing call dimensions.
+ * Analyze a call transcript using the configured LLM provider.
+ * Provider and model are configured via LLM_PROVIDER and LLM_MODEL env vars.
  * Throws on API error — caller should catch and fall back to rules-only scoring.
  */
 export async function analyzeTranscript(
@@ -91,7 +120,9 @@ export async function analyzeTranscript(
   jobType: JobType | null,
   language: Language,
 ): Promise<LLMAnalysis> {
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  const provider = process.env.LLM_PROVIDER ?? 'openai'
+  const model = process.env.LLM_MODEL ?? 'gpt-4o-mini'
+  const aiModel = resolveModel(provider, model)
 
   const userContent = [
     `Job type: ${jobType ?? 'unknown'}`,
@@ -101,24 +132,22 @@ export async function analyzeTranscript(
     formatTranscript(segments),
   ].join('\n')
 
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userContent },
-    ],
+  const result = await generateText({
+    model: aiModel,
+    system: SYSTEM_PROMPT,
+    prompt: userContent,
+    output: Output.object({ schema: LLMResponseSchema }),
     temperature: 0,
   })
 
-  const raw = response.choices[0]?.message?.content ?? '{}'
-  const parsed = LLMResponseSchema.parse(JSON.parse(raw))
+  const parsed = result.output
+  const tokensIn = result.usage.inputTokens ?? 0
+  const tokensOut = result.usage.outputTokens ?? 0
 
-  const tokensIn = response.usage?.prompt_tokens ?? 0
-  const tokensOut = response.usage?.completion_tokens ?? 0
-  const costUsd =
-    tokensIn * GPT4O_MINI_INPUT_COST_PER_TOKEN +
-    tokensOut * GPT4O_MINI_OUTPUT_COST_PER_TOKEN
+  const rates = OPENAI_RATES[model]
+  const costUsd = provider === 'openai' && rates
+    ? tokensIn * rates.input + tokensOut * rates.output
+    : 0
 
   const qualScores: LLMQualScore[] = [
     { dimension: 'diagnosis_quality',     score: parsed.diagnosis_quality.score,     reasoning: parsed.diagnosis_quality.reasoning },
@@ -127,5 +156,5 @@ export async function analyzeTranscript(
     { dimension: 'close_quality',         score: parsed.close_quality.score,         reasoning: parsed.close_quality.reasoning },
   ]
 
-  return { qualScores, tokensIn, tokensOut, costUsd }
+  return { qualScores, tokensIn, tokensOut, costUsd, provider, model }
 }
