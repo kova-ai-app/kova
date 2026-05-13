@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
+import { colors, font, radii, spacing } from '../theme'
 import { setJobMetadata, setSessionStatus } from '../stores/upload-queue'
 import { useRecordingStore } from '../stores/recording-store'
 
@@ -64,7 +65,7 @@ export default function JobTaggingScreen({ navigation, route }: Props) {
           value={notes}
           onChangeText={setNotes}
           placeholder="Any notes about this call..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.textSecondary}
           multiline
           numberOfLines={4}
         />
@@ -82,19 +83,20 @@ export default function JobTaggingScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: colors.bgPage },
   content: { padding: 24 },
-  title: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#6B7280', marginBottom: 32 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
+  title: { fontSize: 24, fontWeight: '700', fontFamily: font.bold, color: colors.textPrimary, marginBottom: 4 },
+  subtitle: { fontSize: 14, fontFamily: font.regular, color: colors.textSecondary, marginBottom: 32 },
+  label: { fontSize: 14, fontWeight: '600', fontFamily: font.semibold, color: colors.textPrimary, marginBottom: 8 },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: radii.md,
     padding: 12,
     fontSize: 16,
-    color: '#111827',
+    fontFamily: font.regular,
+    color: colors.textPrimary,
     marginBottom: 24,
   },
   textarea: { height: 100, textAlignVertical: 'top' },
@@ -102,23 +104,23 @@ const styles = StyleSheet.create({
   segment: {
     flex: 1,
     padding: 10,
-    borderRadius: 8,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgCard,
   },
-  segmentActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
-  segmentText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
+  segmentActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  segmentText: { fontSize: 14, fontWeight: '600', fontFamily: font.semibold, color: colors.textSecondary },
   segmentTextActive: { color: '#FFFFFF' },
   submitButton: {
-    backgroundColor: '#2563EB',
-    borderRadius: 12,
+    backgroundColor: colors.brand,
+    borderRadius: radii.lg,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
   },
-  submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  submitButtonText: { fontSize: 16, fontWeight: '700', fontFamily: font.bold, color: '#FFFFFF' },
   skipButton: { padding: 16, alignItems: 'center' },
-  skipButtonText: { fontSize: 16, color: '#6B7280' },
+  skipButtonText: { fontSize: 16, fontFamily: font.regular, color: colors.textSecondary },
 })
