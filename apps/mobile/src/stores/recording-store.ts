@@ -28,6 +28,8 @@ export type RecordingStatus =
   | 'complete'
   | 'upload_failed'
 
+const BLOCKED_START_STATUSES: RecordingStatus[] = ['recording', 'paused', 'stopped']
+
 interface RecordingState {
   status: RecordingStatus
   sessionId: string | null
@@ -65,11 +67,20 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
 
   startRecording: async ({ techId, companyId }) => {
     const { status } = get()
-    if (status !== 'idle') {
+    if (BLOCKED_START_STATUSES.includes(status)) {
       throw new Error('Recording already active')
     }
     await requestRecordingPermissions()
-    set({ status: 'consent_shown', techId, companyId })
+    set({
+      status: 'consent_shown',
+      sessionId: null,
+      callId: null,
+      techId,
+      companyId,
+      elapsedSec: 0,
+      chunkCount: 0,
+      error: null,
+    })
   },
 
   consentGranted: async () => {

@@ -8,6 +8,7 @@ const setSessionStatus = vi.fn()
 const triggerUpload = vi.fn().mockResolvedValue(undefined)
 const setStatus = vi.fn()
 const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined)
+const reset = vi.fn()
 
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: 'SafeAreaView',
@@ -19,8 +20,8 @@ vi.mock('../../stores/upload-queue', () => ({
 }))
 
 vi.mock('../../stores/recording-store', () => ({
-  useRecordingStore: (selector: (state: { setStatus: typeof setStatus }) => unknown) =>
-    selector({ setStatus }),
+  useRecordingStore: (selector: (state: { setStatus: typeof setStatus; reset: typeof reset }) => unknown) =>
+    selector({ setStatus, reset }),
 }))
 
 vi.mock('../../services/upload-trigger', () => ({
@@ -78,6 +79,9 @@ describe('JobTaggingScreen', () => {
     expect(triggerUpload).toHaveBeenCalledOnce()
     expect(setSessionStatus).not.toHaveBeenCalled()
     expect(setStatus).toHaveBeenCalledWith('uploading')
+    expect(reset).toHaveBeenCalledOnce()
+    expect(triggerUpload.mock.invocationCallOrder[0]).toBeLessThan(reset.mock.invocationCallOrder[0])
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['calls'] })
     expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
   })
 
@@ -118,24 +122,8 @@ describe('JobTaggingScreen', () => {
     expect(triggerUpload).toHaveBeenCalledOnce()
     expect(setSessionStatus).not.toHaveBeenCalled()
     expect(setStatus).toHaveBeenCalledWith('uploading')
-    expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
-  })
-
-  it('invalidates the calls query after skip so Home shows the new call', async () => {
-    const props = createProps()
-    let renderer: ReactTestRenderer
-
-    await act(async () => {
-      renderer = TestRenderer.create(<JobTaggingScreen {...props} />)
-    })
-
-    const skipButton = renderer!.root.findAllByType('TouchableOpacity')[4]
-
-    await act(async () => {
-      await skipButton.props.onPress()
-    })
-
-    expect(triggerUpload).toHaveBeenCalledOnce()
+    expect(reset).toHaveBeenCalledOnce()
+    expect(triggerUpload.mock.invocationCallOrder[0]).toBeLessThan(reset.mock.invocationCallOrder[0])
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['calls'] })
     expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
   })
