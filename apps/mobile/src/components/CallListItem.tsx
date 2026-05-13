@@ -51,8 +51,13 @@ export function StatusBadge({ status }: { status: string }) {
     status === 'failed' ? colors.danger :
     status === 'processing' ? colors.warning :
     colors.textSecondary
+  const bgColor =
+    status === 'scored' ? colors.badgeSuccessBg :
+    status === 'failed' ? colors.badgeDangerBg :
+    status === 'processing' ? colors.badgeWarningBg :
+    colors.badgeMutedBg
   return (
-    <View style={[styles.badge, { backgroundColor: color + '22' }]}>
+    <View style={[styles.badge, { backgroundColor: bgColor }]}>
       <Text style={[styles.badgeText, { color }]}>{status}</Text>
     </View>
   )

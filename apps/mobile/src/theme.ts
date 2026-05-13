@@ -39,6 +39,12 @@ export const colors = {
   warningText: '#78350F',
   warningLabel: '#92400E',
 
+  // Badge backgrounds (translucent — status badges)
+  badgeSuccessBg: '#16A34A22',
+  badgeDangerBg: '#DC262622',
+  badgeWarningBg: '#D9770622',
+  badgeMutedBg: '#6B728022',
+
   // Borders / Separators
   border: '#E8E3DC',       // warm border (mirrors web oklch(0.91 0.007 80))
   separator: '#F0EDE8',    // subtle warm separator
