@@ -210,6 +210,7 @@ describe('stress: getPendingSessions filtering', () => {
     createSession({ sessionId: 'sess-pf-fail', callId: 'c-pf-5', techId: 't-1', companyId: 'co-1', consentLoggedAt: '2026-05-12T10:00:00.000Z' })
 
     setSessionStopped('sess-pf-stop')
+    expect(getSession('sess-pf-stop')?.recordingStoppedAt).not.toBeNull()
     setSessionStatus('sess-pf-upl', 'uploading')
     setSessionStatus('sess-pf-comp', 'complete')
     setSessionStatus('sess-pf-fail', 'failed')
@@ -222,6 +223,8 @@ describe('stress: getPendingSessions filtering', () => {
     expect(ids).toContain('sess-pf-fail')
     expect(ids).not.toContain('sess-pf-rec')
     expect(ids).not.toContain('sess-pf-comp')
+    const pfIds = ids.filter((id) => id.startsWith('sess-pf-'))
+    expect(pfIds).toHaveLength(3)
   })
 })
 
