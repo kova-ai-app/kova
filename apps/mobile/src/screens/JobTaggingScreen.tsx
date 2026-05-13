@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import { colors, font, radii, spacing } from '../theme'
 import { useAuth } from '@clerk/clerk-expo'
+import { useQueryClient } from '@tanstack/react-query'
 import { setJobMetadata } from '../stores/upload-queue'
 import { useRecordingStore } from '../stores/recording-store'
 import { triggerUpload } from '../services/upload-trigger'
@@ -24,6 +25,7 @@ export default function JobTaggingScreen({ navigation, route }: Props) {
   const [notes, setNotes] = useState('')
   const setStatus = useRecordingStore((s) => s.setStatus)
   const { getToken } = useAuth()
+  const queryClient = useQueryClient()
 
   const handleSubmit = async () => {
     setJobMetadata(sessionId, {
@@ -32,12 +34,14 @@ export default function JobTaggingScreen({ navigation, route }: Props) {
     })
     setStatus('uploading')
     await triggerUpload(getToken)
+    void queryClient.invalidateQueries({ queryKey: ['calls'] })
     navigation.navigate('Main')
   }
 
   const handleSkip = async () => {
     setStatus('uploading')
     await triggerUpload(getToken)
+    void queryClient.invalidateQueries({ queryKey: ['calls'] })
     navigation.navigate('Main')
   }
 

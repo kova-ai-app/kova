@@ -7,6 +7,7 @@ const setJobMetadata = vi.fn()
 const setSessionStatus = vi.fn()
 const triggerUpload = vi.fn().mockResolvedValue(undefined)
 const setStatus = vi.fn()
+const mockInvalidateQueries = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaView: 'SafeAreaView',
@@ -29,6 +30,14 @@ vi.mock('../../services/upload-trigger', () => ({
 vi.mock('@clerk/clerk-expo', () => ({
   useAuth: () => ({ getToken: vi.fn().mockResolvedValue('token-123') }),
 }))
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>()
+  return {
+    ...actual,
+    useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+  }
+})
 
 function createProps() {
   return {
@@ -72,6 +81,25 @@ describe('JobTaggingScreen', () => {
     expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
   })
 
+  it('invalidates the calls query after submit so Home shows the new call', async () => {
+    const props = createProps()
+    let renderer: ReactTestRenderer
+
+    await act(async () => {
+      renderer = TestRenderer.create(<JobTaggingScreen {...props} />)
+    })
+
+    const submitButton = renderer!.root.findAllByType('TouchableOpacity')[3]
+
+    await act(async () => {
+      await submitButton.props.onPress()
+    })
+
+    expect(triggerUpload).toHaveBeenCalledOnce()
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['calls'] })
+    expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
+  })
+
   it('starts upload immediately when skipped', async () => {
     const props = createProps()
     let renderer: ReactTestRenderer
@@ -90,6 +118,25 @@ describe('JobTaggingScreen', () => {
     expect(triggerUpload).toHaveBeenCalledOnce()
     expect(setSessionStatus).not.toHaveBeenCalled()
     expect(setStatus).toHaveBeenCalledWith('uploading')
+    expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
+  })
+
+  it('invalidates the calls query after skip so Home shows the new call', async () => {
+    const props = createProps()
+    let renderer: ReactTestRenderer
+
+    await act(async () => {
+      renderer = TestRenderer.create(<JobTaggingScreen {...props} />)
+    })
+
+    const skipButton = renderer!.root.findAllByType('TouchableOpacity')[4]
+
+    await act(async () => {
+      await skipButton.props.onPress()
+    })
+
+    expect(triggerUpload).toHaveBeenCalledOnce()
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['calls'] })
     expect(props.navigation.navigate).toHaveBeenCalledWith('Main')
   })
 })
