@@ -1,7 +1,7 @@
 import { Platform, PermissionsAndroid } from 'react-native'
 import { AudioContext } from 'react-native-audio-api'
-import * as Notifications from 'expo-notifications'
 import RNFS from 'react-native-fs'
+import { startRecordingForegroundService, stopRecordingForegroundService } from './foreground-service'
 import { v4 as uuidv4 } from 'uuid'
 import { addChunk } from '../stores/upload-queue'
 
@@ -11,7 +11,6 @@ import { addChunk } from '../stores/upload-queue'
 
 const CHUNK_DURATION_MS = 5 * 60 * 1000 // 5 minutes
 const MIN_FREE_BYTES = 200 * 1024 * 1024  // 200 MB
-const RECORDING_NOTIFICATION_ID = 'kova-recording-active'
 
 let audioContext: InstanceType<typeof AudioContext> | null = null
 let recorder: any = null
@@ -78,34 +77,6 @@ export async function playConsentTone(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Android foreground service notification
-// ---------------------------------------------------------------------------
-
-async function showRecordingNotification(): Promise<void> {
-  if (Platform.OS !== 'android') return
-  await Notifications.setNotificationChannelAsync('kova-recording', {
-    name: 'Recording Status',
-    importance: Notifications.AndroidImportance.LOW,
-    sound: null,
-  })
-  await Notifications.scheduleNotificationAsync({
-    identifier: RECORDING_NOTIFICATION_ID,
-    content: {
-      title: 'Kova — Recording Active',
-      body: 'Tap to return to the app.',
-      sticky: true,
-      priority: 'low',
-    },
-    trigger: null,
-  })
-}
-
-async function dismissRecordingNotification(): Promise<void> {
-  if (Platform.OS !== 'android') return
-  await Notifications.dismissNotificationAsync(RECORDING_NOTIFICATION_ID)
-}
-
-// ---------------------------------------------------------------------------
 // Recorder lifecycle
 // ---------------------------------------------------------------------------
 
@@ -135,7 +106,7 @@ export async function startRecorder(sessionId: string): Promise<void> {
   })
 
   await recorder.start()
-  await showRecordingNotification()
+  await startRecordingForegroundService()
 }
 
 function handleChunkRotation(filePath: string, durationSec: number): void {
@@ -166,7 +137,7 @@ export async function stopRecorder(): Promise<{ durationSec: number }> {
 
   const result = await recorder?.stop()
   recorder = null
-  await dismissRecordingNotification()
+  await stopRecordingForegroundService()
 
   if (result?.filePath && result?.durationSec > 0) {
     handleChunkRotation(result.filePath, result.durationSec)

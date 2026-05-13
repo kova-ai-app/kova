@@ -14,6 +14,7 @@
   "dependencies": {
     "@clerk/clerk-expo": "^2.19.31",
     "@kova/shared": "workspace:*",
+    "@notifee/react-native": "^9.1.8",
     "@react-native-community/netinfo": "^12.0.1",
     "@react-navigation/bottom-tabs": "^7.0.0",
     "@react-navigation/native": "^7.0.0",
