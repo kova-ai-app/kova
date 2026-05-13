@@ -1,6 +1,6 @@
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import TestRenderer, { act } from 'react-test-renderer'
+import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import HomeScreen from '../HomeScreen'
 
@@ -47,7 +47,7 @@ describe('HomeScreen', () => {
   it('keeps hook order stable when the calls query resolves', async () => {
     fetchCallsMock.mockResolvedValue({ data: [{ id: 'call-1', recordedAt: new Date().toISOString(), durationSec: 60, status: 'scored' }], nextPage: null, total: 1 })
 
-    let renderer: TestRenderer.ReactTestRenderer | undefined
+    let renderer: ReactTestRenderer | undefined
 
     await expect(async () => {
       await act(async () => {

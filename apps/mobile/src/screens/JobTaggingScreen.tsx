@@ -11,8 +11,10 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import { colors, font, radii, spacing } from '../theme'
-import { setJobMetadata, setSessionStatus } from '../stores/upload-queue'
+import { useAuth } from '@clerk/clerk-expo'
+import { setJobMetadata } from '../stores/upload-queue'
 import { useRecordingStore } from '../stores/recording-store'
+import { triggerUpload } from '../services/upload-trigger'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'JobTagging'>
 
@@ -21,20 +23,21 @@ export default function JobTaggingScreen({ navigation, route }: Props) {
   const [jobType, setJobType] = useState<'drain' | 'plumbing' | 'both'>('drain')
   const [notes, setNotes] = useState('')
   const setStatus = useRecordingStore((s) => s.setStatus)
+  const { getToken } = useAuth()
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setJobMetadata(sessionId, {
       jobType,
       notes: notes.trim() || undefined,
     })
-    setSessionStatus(sessionId, 'uploading')
     setStatus('uploading')
+    await triggerUpload(getToken)
     navigation.navigate('Main')
   }
 
-  const handleSkip = () => {
-    setSessionStatus(sessionId, 'uploading')
+  const handleSkip = async () => {
     setStatus('uploading')
+    await triggerUpload(getToken)
     navigation.navigate('Main')
   }
 

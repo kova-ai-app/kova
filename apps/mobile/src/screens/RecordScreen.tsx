@@ -8,6 +8,7 @@ import {
   Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import DeviceInfo from 'react-native-device-info'
 import { colors, font, radii, spacing } from '../theme'
 import { useAuth, useOrganization } from '@clerk/clerk-expo'
@@ -137,14 +138,19 @@ export default function RecordScreen() {
         {/* Battery warning */}
         {batteryLevel !== null && batteryLevel <= 20 && isActive && (
           <View style={styles.batteryWarning}>
-            <Text style={styles.batteryWarningText}>⚠️ Battery at {batteryLevel}%</Text>
+            <Text style={styles.batteryWarningText}>Battery at {batteryLevel}%</Text>
           </View>
         )}
 
         {/* Main record button */}
         {!isActive && (
-          <TouchableOpacity style={styles.recordButton} onPress={handlePressRecord}>
-            <Text style={styles.recordButtonText}>Start Recording</Text>
+          <TouchableOpacity
+            style={styles.recordButton}
+            onPress={handlePressRecord}
+            accessibilityRole="button"
+            accessibilityLabel="Start recording"
+          >
+            <Ionicons name="mic" size={26} color="#FFFFFF" />
           </TouchableOpacity>
         )}
 
@@ -154,11 +160,18 @@ export default function RecordScreen() {
             <TouchableOpacity
               style={styles.pauseButton}
               onPress={isRecording ? pauseRecording : resumeRecording}
+              accessibilityRole="button"
+              accessibilityLabel={isRecording ? 'Pause recording' : 'Resume recording'}
             >
-              <Text style={styles.pauseButtonText}>{isRecording ? 'Pause' : 'Resume'}</Text>
+              <Ionicons name={isRecording ? 'pause' : 'play'} size={22} color="#FFFFFF" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.stopButton} onPress={handleStop}>
-              <Text style={styles.stopButtonText}>Stop</Text>
+            <TouchableOpacity
+              style={styles.stopButton}
+              onPress={handleStop}
+              accessibilityRole="button"
+              accessibilityLabel="Stop recording"
+            >
+              <Ionicons name="stop" size={22} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
@@ -189,26 +202,29 @@ const styles = StyleSheet.create({
   batteryWarningText: { fontFamily: font.semibold, color: '#FEF2F2', fontSize: 14 },
   recordButton: {
     backgroundColor: colors.brand,
-    paddingHorizontal: 40,
-    paddingVertical: 18,
+    width: 88,
+    height: 88,
     borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  recordButtonText: { fontFamily: font.bold, color: '#FFFFFF', fontSize: 18 },
   controls: { flexDirection: 'row', gap: spacing.lg },
   pauseButton: {
     backgroundColor: '#1F2937',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
+    width: 64,
+    height: 64,
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: '#374151',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  pauseButtonText: { fontFamily: font.semibold, color: '#FFFFFF', fontSize: 16 },
   stopButton: {
     backgroundColor: '#DC2626',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
+    width: 64,
+    height: 64,
     borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  stopButtonText: { fontFamily: font.bold, color: '#FFFFFF', fontSize: 16 },
 })

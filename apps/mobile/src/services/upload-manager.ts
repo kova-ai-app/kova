@@ -47,7 +47,7 @@ async function processSession(
   // Sync consent event if not yet synced
   if (!session.consentSyncedAt) {
     try {
-      await fetch(`${apiBaseUrl}/api/calls/consent`, {
+      const consentRes = await fetch(`${apiBaseUrl}/api/calls/consent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +60,10 @@ async function processSession(
           devicePlatform: Platform.OS,
         }),
       })
-      markConsentSynced(session.sessionId)
+
+      if (consentRes.ok) {
+        markConsentSynced(session.sessionId)
+      }
     } catch {
       // Non-blocking — continue with upload
     }
@@ -84,6 +87,8 @@ async function processSession(
     const anyFailed = refreshed.chunks.some((c) => c.status === 'failed')
     if (anyFailed) {
       setSessionStatus(session.sessionId, 'failed')
+    } else {
+      setSessionStatus(session.sessionId, 'stopped')
     }
     return
   }

@@ -377,13 +377,7 @@ describe('runUploadManager — partial chunk failure', () => {
     await runUploadManager({ apiBaseUrl: API_BASE, authToken: AUTH_TOKEN })
 
     const session = getSession('sess-partial')
-    // Not all uploaded -> no upload-complete call
-    // Chunk 0: attempt=1 < 5 -> status stays 'pending' (not 'failed')
-    // allUploaded=false, anyFailed=false -> session stays 'uploading'
-    // 'uploading' is the expected terminal state here:
-    // allUploaded=false (chunk 0 failed), anyFailed=false (attempt=1 < 5 threshold),
-    // so processSession returns without calling setSessionStatus again
-    expect(session?.overallStatus).toBe('uploading')
+    expect(session?.overallStatus).toBe('stopped')
     expect(session?.chunks[0]?.status).toBe('pending')
     expect(session?.chunks[0]?.uploadAttempts).toBe(1)
     expect(session?.chunks[1]?.status).toBe('uploaded')
@@ -476,5 +470,45 @@ describe('runUploadManager — consent sync', () => {
       'http://localhost:3000/api/calls/consent',
       expect.objectContaining({ method: 'POST' })
     )
+  })
+
+  it('does not mark consent synced when the consent API returns non-ok', async () => {
+    createSession({
+      sessionId: 'sess-consent-fail',
+      callId: 'call-consent-fail',
+      techId: 'tech-1',
+      companyId: 'co-1',
+      consentLoggedAt: '2026-05-12T10:00:00.000Z',
+    })
+    addChunk('sess-consent-fail', {
+      chunkId: 'c-con-fail-0',
+      chunkIndex: 0,
+      filePath: '/tmp/con_fail_0.aac',
+      sizeBytes: 1200000,
+      durationSec: 300,
+    })
+    setSessionStopped('sess-consent-fail')
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          presignedUrl: 'https://s3.aws/con-fail',
+          s3Key: 'audio/co-1/sess-consent-fail/chunk_0.aac',
+          expiresIn: 900,
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ callId: 'call-consent-fail', status: 'pending' }),
+      })
+
+    await runUploadManager({ apiBaseUrl: API_BASE, authToken: AUTH_TOKEN })
+
+    const session = getSession('sess-consent-fail')
+    expect(session?.consentSyncedAt).toBeNull()
+    expect(session?.overallStatus).toBe('complete')
   })
 })

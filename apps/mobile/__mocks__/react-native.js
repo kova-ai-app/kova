@@ -19,6 +19,22 @@ const Text = createComponent('Text')
 const FlatList = createComponent('FlatList')
 const TouchableOpacity = createComponent('TouchableOpacity')
 const ActivityIndicator = createComponent('ActivityIndicator')
+const TextInput = createComponent('TextInput')
+const ScrollView = createComponent('ScrollView')
+const SafeAreaView = createComponent('SafeAreaView')
+const Modal = createComponent('Modal')
+
+const Animated = {
+  Value: function Value(initial) {
+    this.value = initial
+    this.setValue = () => {}
+    this.stopAnimation = () => {}
+  },
+  View: createComponent('Animated.View'),
+  loop: () => ({ start: () => {} }),
+  sequence: (steps) => steps,
+  timing: () => ({}),
+}
 
 const StyleSheet = {
   create: (styles) => styles,
@@ -48,6 +64,11 @@ module.exports = {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
+  ScrollView,
+  SafeAreaView,
+  Modal,
+  Animated,
   StyleSheet,
   PermissionsAndroid,
   AppState,
