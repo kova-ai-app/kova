@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useUser, useOrganization, useAuth } from '@clerk/clerk-expo'
+import { colors, font, radii, spacing } from '../theme'
 
 // ---------------------------------------------------------------------------
 // ProfileScreen — User info and sign-out
@@ -34,7 +35,7 @@ function ProfileContent() {
   if (!userLoaded || !orgLoaded) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#2563EB" />
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     )
   }
@@ -68,39 +69,39 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAF8', padding: 24 },
+  container: { flex: 1, backgroundColor: colors.bgPage, padding: spacing.xl },
   title: {
+    fontFamily: font.bold,
     fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 24,
-    marginTop: 16,
+    color: colors.textPrimary,
+    marginBottom: spacing.xl,
+    marginTop: spacing.lg,
   },
-  placeholder: { color: '#6B7280' },
+  placeholder: { fontFamily: font.regular, color: colors.textSecondary },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: colors.bgCard,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 24,
+    borderColor: colors.border,
+    marginBottom: spacing.xl,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.separator,
   },
-  rowLabel: { fontSize: 14, color: '#6B7280' },
-  rowValue: { fontSize: 14, color: '#111827', fontWeight: '500' },
+  rowLabel: { fontFamily: font.regular, fontSize: 14, color: colors.textSecondary },
+  rowValue: { fontFamily: font.medium, fontSize: 14, color: colors.textPrimary },
   signOutButton: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: colors.dangerBg,
     borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: 8,
+    borderColor: colors.dangerBorder,
+    borderRadius: radii.md,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  signOutText: { color: '#DC2626', fontSize: 16, fontWeight: '600' },
+  signOutText: { fontFamily: font.semibold, color: colors.danger, fontSize: 16 },
 })
