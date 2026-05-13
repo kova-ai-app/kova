@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { getAuthContext } from '@/lib/auth'
 import { getDashboardData } from '@/lib/dashboard'
 import { db, companies, calls, scores, users, customers } from '@kova/db'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, sql } from 'drizzle-orm'
 import { formatMoney, formatMoneyRange, formatRelativeTime } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -78,12 +78,12 @@ export default async function DashboardPage() {
     .select({
       id: calls.id,
       techId: calls.techId,
-      techName: users.name,
+      techName: sql<string>`${users.name}`.as('tech_name'),
       recordedAt: calls.recordedAt,
       durationSec: calls.durationSec,
       status: calls.status,
       jobType: calls.jobType,
-      customerName: customers.name,
+      customerName: sql<string | null>`${customers.name}`.as('customer_name'),
       overallScore: scores.overallScore,
       opportunityTotalLow: scores.opportunityTotalLow,
       opportunityTotalHigh: scores.opportunityTotalHigh,
