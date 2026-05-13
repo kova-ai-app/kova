@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
+import { colors, font, radii, shadow, spacing } from '../theme'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -118,7 +119,7 @@ export default function AskScreen() {
           <TextInput
             style={styles.input}
             placeholder="Ask about your calls…"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.textMuted}
             value={input}
             onChangeText={setInput}
             multiline
@@ -147,110 +148,96 @@ export default function AskScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: '#FAFAF8' },
-
-  // Messages
+  container: { flex: 1, backgroundColor: colors.bgPage },
   messageList: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
-
-  // AI bubble
   aiBubbleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
     maxWidth: '85%',
   },
   aiAvatar: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: '#2563EB',
+    borderRadius: radii.full,
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: spacing.sm,
     marginTop: 2,
     flexShrink: 0,
   },
   aiBubble: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderTopLeftRadius: 4,
+    backgroundColor: colors.bgCard,
+    borderRadius: radii.xl,
+    borderTopLeftRadius: radii.xs,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#E8E3DC',
+    borderColor: colors.border,
     flex: 1,
-    // card-level elevation
-    shadowColor: '#1C1917',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    ...shadow.card,
   },
   aiText: {
+    fontFamily: font.regular,
     fontSize: 15,
-    color: '#1C1917',
+    color: colors.textPrimary,
     lineHeight: 22,
   },
-
-  // User bubble
   userBubbleRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   userBubble: {
-    backgroundColor: '#2563EB',
-    borderRadius: 16,
-    borderBottomRightRadius: 4,
+    backgroundColor: colors.brand,
+    borderRadius: radii.xl,
+    borderBottomRightRadius: radii.xs,
     paddingHorizontal: 14,
     paddingVertical: 10,
     maxWidth: '75%',
   },
   userText: {
+    fontFamily: font.regular,
     fontSize: 15,
     color: '#FFFFFF',
     lineHeight: 22,
   },
-
-  // Input bar — warm bg, soft top shadow instead of hard border
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    backgroundColor: '#FAFAF8',
-    gap: 8,
-    shadowColor: '#1C1917',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 4,
+    backgroundColor: colors.bgPage,
+    gap: spacing.sm,
+    ...shadow.inputBar,
   },
   input: {
     flex: 1,
-    backgroundColor: '#F0EDE8',
+    backgroundColor: colors.bgInput,
     borderRadius: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 10,
+    fontFamily: font.regular,
     fontSize: 15,
-    color: '#1C1917',
+    color: colors.textPrimary,
     maxHeight: 120,
     lineHeight: 20,
   },
   sendButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: '#2563EB',
+    borderRadius: radii.full,
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   sendButtonDisabled: {
-    backgroundColor: '#E8E3DC',
+    backgroundColor: colors.border,
   },
 })
