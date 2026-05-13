@@ -1,6 +1,5 @@
 import { Platform, PermissionsAndroid } from 'react-native'
 import {
-  AudioContext,
   AudioRecorder,
   FileFormat,
   FileDirectory,
@@ -9,6 +8,7 @@ import {
   FlacCompressionLevel,
 } from 'react-native-audio-api'
 import { Audio } from 'expo-av'
+import { Buffer } from 'buffer'
 import RNFS from 'react-native-fs'
 import { startRecordingForegroundService, stopRecordingForegroundService } from './foreground-service'
 import { v4 as uuidv4 } from 'uuid'
@@ -56,33 +56,91 @@ export async function requestRecordingPermissions(): Promise<void> {
     }
   }
 
-  // iOS: react-native-audio-api handles AVAudioSession permission internally
-  // when AudioContext is created with input enabled
+  // iOS: permission is requested when the AudioRecorder starts
 }
 
 // ---------------------------------------------------------------------------
 // Consent tone — 440Hz sine wave for 1 second
+// Uses expo-av instead of AudioContext to avoid poisoning the AVAudioSession
+// category. AudioContext sets the session to Playback mode, which prevents
+// the AudioRecorder from accessing the microphone.
 // ---------------------------------------------------------------------------
 
+function generateToneWav(): string {
+  const sampleRate = 22050
+  const durationSec = 1
+  const frequency = 440
+  const numSamples = sampleRate * durationSec
+  const amplitude = 0.3 * 32767
+
+  // Generate 16-bit PCM samples
+  const samples = new Int16Array(numSamples)
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate
+    // Fade out in last 200ms
+    const fadeStart = durationSec - 0.2
+    const fade = t > fadeStart ? 1 - (t - fadeStart) / 0.2 : 1
+    samples[i] = Math.round(amplitude * fade * Math.sin(2 * Math.PI * frequency * t))
+  }
+
+  // Build WAV header (44 bytes)
+  const dataSize = numSamples * 2
+  const header = Buffer.alloc(44)
+  header.write('RIFF', 0)
+  header.writeUInt32LE(36 + dataSize, 4)
+  header.write('WAVE', 8)
+  header.write('fmt ', 12)
+  header.writeUInt32LE(16, 16)             // chunk size
+  header.writeUInt16LE(1, 20)              // PCM format
+  header.writeUInt16LE(1, 22)              // mono
+  header.writeUInt32LE(sampleRate, 24)
+  header.writeUInt32LE(sampleRate * 2, 28) // byte rate
+  header.writeUInt16LE(2, 32)              // block align
+  header.writeUInt16LE(16, 34)             // bits per sample
+  header.write('data', 36)
+  header.writeUInt32LE(dataSize, 40)
+
+  const sampleBuffer = Buffer.from(samples.buffer)
+  return Buffer.concat([header, sampleBuffer]).toString('base64')
+}
+
+// Cache the WAV so we only generate it once
+let cachedToneBase64: string | null = null
+
 export async function playConsentTone(): Promise<void> {
-  const ctx = new AudioContext()
-  const oscillator = ctx.createOscillator()
-  const gain = ctx.createGain()
+  if (!cachedToneBase64) {
+    cachedToneBase64 = generateToneWav()
+  }
 
-  oscillator.type = 'sine'
-  oscillator.frequency.value = 440
+  // Write WAV to temp file
+  const tmpPath = `${RNFS.CachesDirectoryPath}/kova_consent_tone.wav`
+  await RNFS.writeFile(tmpPath, cachedToneBase64, 'base64')
 
-  gain.gain.setValueAtTime(0.3, ctx.currentTime)
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1)
+  // Configure session for recording BEFORE playing the tone — this ensures
+  // the session stays in PlayAndRecord mode throughout.
+  if (Platform.OS === 'ios') {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+    })
+  }
 
-  oscillator.connect(gain)
-  gain.connect(ctx.destination)
+  const { sound } = await Audio.Sound.createAsync(
+    { uri: `file://${tmpPath}` },
+    { shouldPlay: true, volume: 0.3 }
+  )
 
-  oscillator.start(ctx.currentTime)
-  oscillator.stop(ctx.currentTime + 1)
+  // Wait for playback to finish
+  await new Promise<void>((resolve) => {
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if (status.isLoaded && status.didJustFinish) {
+        resolve()
+      }
+    })
+  })
 
-  await new Promise<void>((resolve) => setTimeout(resolve, 1100))
-  await ctx.close()
+  await sound.unloadAsync()
 }
 
 // ---------------------------------------------------------------------------
@@ -92,17 +150,6 @@ export async function playConsentTone(): Promise<void> {
 export async function startRecorder(sessionId: string): Promise<void> {
   if (recorder !== null) {
     throw new Error('Recorder already active')
-  }
-
-  // On iOS, playConsentTone() uses AudioContext which sets AVAudioSession to
-  // Playback mode (inputChannels=0). Reset the session to PlayAndRecord so
-  // the recorder can access the microphone.
-  if (Platform.OS === 'ios') {
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-    })
   }
 
   currentSessionId = sessionId
