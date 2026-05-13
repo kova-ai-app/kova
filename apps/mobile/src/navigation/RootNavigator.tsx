@@ -6,6 +6,7 @@ import TabNavigator from './TabNavigator'
 import SignInScreen from '../screens/SignInScreen'
 import JobTaggingScreen from '../screens/JobTaggingScreen'
 import CallDetailScreen from '../screens/CallDetailScreen'
+import SettingsScreen from '../screens/SettingsScreen'
 import { useRecordingStore } from '../stores/recording-store'
 import type { RootStackParamList } from './types'
 import { colors, font } from '../theme'
@@ -65,6 +66,11 @@ function StackNav({ isSignedIn }: { isSignedIn: boolean }) {
           name="CallDetail"
           component={CallDetailScreen}
           options={{ title: 'Call Detail', headerShown: true }}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{ title: 'Settings', headerShown: true }}
         />
       </Stack.Navigator>
     </NavigationContainer>

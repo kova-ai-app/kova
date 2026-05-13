@@ -28,7 +28,7 @@ if (!isLocalIosBuild) {
 }
 
 if (isLocalIosBuild) {
-  plugins.push(withLocalIosNoApns)
+  plugins.push(withLocalIosNoApns as unknown as NonNullable<ExpoConfig['plugins']>[number])
 }
 
 plugins.push(

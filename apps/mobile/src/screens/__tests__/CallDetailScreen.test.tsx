@@ -128,7 +128,7 @@ describe('CallDetailScreen audio playback', () => {
   it('switches to playback mode before loading call audio', async () => {
     const renderer = await renderScreen()
 
-    const playButton = (renderer.root.findAllByType('TouchableOpacity') as TestTouchableNode[]).find(
+    const playButton = (renderer.root.findAllByType('TouchableOpacity') as unknown as TestTouchableNode[]).find(
       (node) => node.findAllByType('Text').some((textNode: TestTextNode) => textNode.props.children === '▶  Play Recording')
     )
 
@@ -147,7 +147,7 @@ describe('CallDetailScreen audio playback', () => {
   it('replays from the beginning after playback finishes', async () => {
     const renderer = await renderScreen()
 
-    const initialPlayButton = (renderer.root.findAllByType('TouchableOpacity') as TestTouchableNode[]).find(
+    const initialPlayButton = (renderer.root.findAllByType('TouchableOpacity') as unknown as TestTouchableNode[]).find(
       (node) => node.findAllByType('Text').some((textNode: TestTextNode) => textNode.props.children === '▶  Play Recording')
     )
 
@@ -165,7 +165,7 @@ describe('CallDetailScreen audio playback', () => {
       })
     })
 
-    const replayButton = (renderer.root.findAllByType('TouchableOpacity') as TestTouchableNode[]).find(
+    const replayButton = (renderer.root.findAllByType('TouchableOpacity') as unknown as TestTouchableNode[]).find(
       (node) => node.findAllByType('Text').some((textNode: TestTextNode) => textNode.props.children === '▶  Play Recording')
     )
 

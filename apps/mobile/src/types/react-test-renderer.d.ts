@@ -1,16 +1,21 @@
 declare module 'react-test-renderer' {
   import type * as React from 'react'
 
+  export interface ReactTestInstance {
+    props: Record<string, unknown>
+    findByProps(props: Record<string, unknown>): ReactTestInstance
+    findAllByProps(props: Record<string, unknown>): ReactTestInstance[]
+    findAllByType(type: string): ReactTestInstance[]
+  }
+
   export interface ReactTestRenderer {
-    root: {
-      findByProps(props: Record<string, unknown>): any
-      findAllByType(type: string): any[]
-    }
+    root: ReactTestInstance
     unmount(): void
   }
 
   export function create(element: React.ReactElement): ReactTestRenderer
-  export function act(callback: () => void | Promise<void>): Promise<void>
+  export function act(callback: () => void): void
+  export function act(callback: () => Promise<void>): Promise<void>
 
   const TestRenderer: {
     create: typeof create

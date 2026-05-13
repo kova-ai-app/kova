@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isValidElement, type ReactNode } from 'react'
+import { isValidElement, type ReactElement, type ReactNode } from 'react'
+
+const globalWithDev = globalThis as typeof globalThis & { __DEV__?: boolean }
+globalWithDev.__DEV__ = false
 
 vi.mock('@clerk/clerk-expo', () => ({
   ClerkProvider: ({ children }: { children: ReactNode }) => children,
@@ -13,6 +16,15 @@ vi.mock('expo-secure-store', () => ({
 
 vi.mock('expo-status-bar', () => ({
   StatusBar: () => null,
+}))
+
+vi.mock('@expo-google-fonts/plus-jakarta-sans', () => ({
+  useFonts: () => [true],
+  PlusJakartaSans_400Regular: {},
+  PlusJakartaSans_500Medium: {},
+  PlusJakartaSans_600SemiBold: {},
+  PlusJakartaSans_700Bold: {},
+  PlusJakartaSans_800ExtraBold: {},
 }))
 
 vi.mock('@sentry/react-native', () => ({
@@ -63,11 +75,12 @@ function containsElementType(node: ReactNode, elementType: unknown): boolean {
     return true
   }
 
-  return containsElementType(node.props.children, elementType)
+  return containsElementType((node as ReactElement<{ children?: ReactNode }>).props.children, elementType)
 }
 
 afterEach(() => {
   delete process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
+  globalWithDev.__DEV__ = false
   vi.resetModules()
 })
 

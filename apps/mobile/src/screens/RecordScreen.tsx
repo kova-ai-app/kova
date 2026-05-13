@@ -14,6 +14,7 @@ import { colors, font, radii, spacing } from '../theme'
 import { useAuth, useOrganization } from '@clerk/clerk-expo'
 import { useRecordingStore } from '../stores/recording-store'
 import ConsentModal from '../components/ConsentModal'
+import SettingsButton from '../components/SettingsButton'
 
 const IS_CLERK_CONFIGURED = !!process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
 
@@ -113,6 +114,8 @@ export default function RecordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <SettingsButton color="#FFFFFF" style={styles.settingsButton} />
+
       <ConsentModal
         visible={status === 'consent_shown'}
         onConsent={consentGranted}
@@ -183,6 +186,15 @@ export default function RecordScreen() {
 const styles = StyleSheet.create({
   // Dark bg intentional — full-screen recording mode
   container: { flex: 1, backgroundColor: '#111827' },
+  settingsButton: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.lg,
+    zIndex: 1,
+    backgroundColor: '#1F2937',
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   dot: { width: 24, height: 24, borderRadius: radii.full, backgroundColor: '#EF4444', marginBottom: spacing.xl },
   timer: {

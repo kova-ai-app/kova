@@ -3,21 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { useUser, useOrganization, useAuth } from '@clerk/clerk-expo'
 import { colors, font, radii, spacing } from '../theme'
 
-// ---------------------------------------------------------------------------
-// ProfileScreen — User info and sign-out
-// Shows name, phone, and organization from the active Clerk session.
-// Falls back to a placeholder when Clerk is not configured.
-// ---------------------------------------------------------------------------
-
-function ProfilePlaceholder() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
-      <Text style={styles.placeholder}>Clerk is not configured.</Text>
-    </View>
-  )
-}
-
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.row}>
@@ -27,14 +12,24 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ProfileContent() {
+function SettingsPlaceholder() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Settings</Text>
+      <Text style={styles.sectionLabel}>Profile</Text>
+      <Text style={styles.placeholder}>Clerk is not configured.</Text>
+    </View>
+  )
+}
+
+function SettingsContent() {
   const { user, isLoaded: userLoaded } = useUser()
   const { organization, isLoaded: orgLoaded } = useOrganization()
   const { signOut } = useAuth()
 
   if (!userLoaded || !orgLoaded) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={colors.brand} />
       </View>
     )
@@ -46,7 +41,8 @@ function ProfileContent() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.title}>Settings</Text>
+      <Text style={styles.sectionLabel}>Profile</Text>
 
       <View style={styles.card}>
         <Row label="Name" value={name} />
@@ -63,19 +59,28 @@ function ProfileContent() {
 
 const IS_CLERK_CONFIGURED = !!process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
 
-export default function ProfileScreen() {
-  if (!IS_CLERK_CONFIGURED) return <ProfilePlaceholder />
-  return <ProfileContent />
+export default function SettingsScreen() {
+  if (!IS_CLERK_CONFIGURED) return <SettingsPlaceholder />
+  return <SettingsContent />
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgPage, padding: spacing.xl },
+  centered: { justifyContent: 'center', alignItems: 'center' },
   title: {
     fontFamily: font.bold,
     fontSize: 24,
     color: colors.textPrimary,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
     marginTop: spacing.lg,
+  },
+  sectionLabel: {
+    fontFamily: font.semibold,
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   placeholder: { fontFamily: font.regular, color: colors.textSecondary },
   card: {

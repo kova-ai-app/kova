@@ -6,6 +6,7 @@ import RecordScreen from '../RecordScreen'
 const mockUseRecordingStore = vi.fn()
 const mockUseAuth = vi.fn()
 const mockUseOrganization = vi.fn()
+const navigateMock = vi.fn()
 
 vi.mock('../../stores/recording-store', () => ({
   useRecordingStore: () => mockUseRecordingStore(),
@@ -14,6 +15,10 @@ vi.mock('../../stores/recording-store', () => ({
 vi.mock('@clerk/clerk-expo', () => ({
   useAuth: () => mockUseAuth(),
   useOrganization: () => mockUseOrganization(),
+}))
+
+vi.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: navigateMock }),
 }))
 
 vi.mock('@expo/vector-icons', () => ({
@@ -80,8 +85,20 @@ describe('RecordScreen controls', () => {
 
     const renderer = renderScreen()
 
-    expect(renderer.root.findAllByType('Ionicons')).toHaveLength(1)
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Open settings' })).toBeTruthy()
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start recording' })).toBeTruthy()
     expect(() => renderer.root.findByProps({ children: 'Start Recording' })).toThrow()
+  })
+
+  it('keeps the settings button available while idle', () => {
+    mockUseAuth.mockReturnValue({ userId: 'user-1' })
+    mockUseOrganization.mockReturnValue({ organization: { id: 'org-1' } })
+    mockUseRecordingStore.mockReturnValue(createRecordingState())
+
+    const renderer = renderScreen()
+
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Open settings' })).toBeTruthy()
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Start recording' })).toBeTruthy()
   })
 
   it('shows the start recording button again after handoff enters uploading', () => {
@@ -106,9 +123,25 @@ describe('RecordScreen controls', () => {
 
     const renderer = renderScreen()
 
-    expect(renderer.root.findAllByType('Ionicons')).toHaveLength(2)
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Open settings' })).toBeTruthy()
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Pause recording' })).toBeTruthy()
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Stop recording' })).toBeTruthy()
     expect(() => renderer.root.findByProps({ children: 'Pause' })).toThrow()
     expect(() => renderer.root.findByProps({ children: 'Stop' })).toThrow()
+  })
+
+  it('keeps the settings button available while recording', () => {
+    mockUseAuth.mockReturnValue({ userId: 'user-1' })
+    mockUseOrganization.mockReturnValue({ organization: { id: 'org-1' } })
+    mockUseRecordingStore.mockReturnValue(
+      createRecordingState({ status: 'recording', elapsedSec: 42, chunkCount: 1 })
+    )
+
+    const renderer = renderScreen()
+
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Open settings' })).toBeTruthy()
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Pause recording' })).toBeTruthy()
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Stop recording' })).toBeTruthy()
   })
 
   it('renders battery warning text without emoji', () => {

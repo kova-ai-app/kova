@@ -3,6 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer'
 import JobTaggingScreen from '../JobTaggingScreen'
 
+type TextareaNode = { props: { onChangeText: (value: string) => void } }
+type ButtonNode = { props: { onPress: () => Promise<void> | void } }
+
 const setJobMetadata = vi.fn()
 const setSessionStatus = vi.fn()
 const triggerUpload = vi.fn().mockResolvedValue(undefined)
@@ -33,7 +36,7 @@ vi.mock('@clerk/clerk-expo', () => ({
 }))
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tanstack/react-query')>()
+  const actual = await importOriginal() as Record<string, unknown>
   return {
     ...actual,
     useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
@@ -60,13 +63,13 @@ describe('JobTaggingScreen', () => {
       renderer = TestRenderer.create(<JobTaggingScreen {...props} />)
     })
 
-    const textarea = renderer!.root.findByProps({ placeholder: 'Any notes about this call...' })
+    const textarea = renderer!.root.findByProps({ placeholder: 'Any notes about this call...' }) as unknown as TextareaNode
 
     await act(async () => {
       textarea.props.onChangeText('  Needs camera scope cleanup  ')
     })
 
-    const submitButton = renderer!.root.findAllByType('TouchableOpacity')[3]
+    const submitButton = renderer!.root.findAllByType('TouchableOpacity')[3] as unknown as ButtonNode
 
     await act(async () => {
       await submitButton.props.onPress()
@@ -93,7 +96,7 @@ describe('JobTaggingScreen', () => {
       renderer = TestRenderer.create(<JobTaggingScreen {...props} />)
     })
 
-    const submitButton = renderer!.root.findAllByType('TouchableOpacity')[3]
+    const submitButton = renderer!.root.findAllByType('TouchableOpacity')[3] as unknown as ButtonNode
 
     await act(async () => {
       await submitButton.props.onPress()
@@ -112,7 +115,7 @@ describe('JobTaggingScreen', () => {
       renderer = TestRenderer.create(<JobTaggingScreen {...props} />)
     })
 
-    const skipButton = renderer!.root.findAllByType('TouchableOpacity')[4]
+    const skipButton = renderer!.root.findAllByType('TouchableOpacity')[4] as unknown as ButtonNode
 
     await act(async () => {
       await skipButton.props.onPress()

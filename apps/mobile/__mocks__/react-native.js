@@ -51,6 +51,7 @@ const AppState = {
 }
 
 const TurboModuleRegistry = {
+  get: () => null,
   getEnforcing: () => null,
 }
 

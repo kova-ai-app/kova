@@ -1,6 +1,5 @@
 // apps/mobile/src/components/CallListItem.tsx
-// Shared components used by both HomeScreen and CallsScreen.
-// Previously duplicated verbatim in both files.
+// Shared call-list primitives used by HomeScreen.
 
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'

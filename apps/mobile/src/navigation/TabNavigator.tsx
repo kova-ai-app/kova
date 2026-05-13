@@ -5,10 +5,9 @@ import { Ionicons } from '@expo/vector-icons'
 import HomeScreen from '../screens/HomeScreen'
 import AskScreen from '../screens/AskScreen'
 import RecordScreen from '../screens/RecordScreen'
-import CallsScreen from '../screens/CallsScreen'
-import ProfileScreen from '../screens/ProfileScreen'
 import type { TabParamList } from './types'
-import { colors, font } from '../theme'
+import SettingsButton from '../components/SettingsButton'
+import { colors, font, spacing } from '../theme'
 
 const Tab = createBottomTabNavigator<TabParamList>()
 
@@ -46,6 +45,7 @@ export default function TabNavigator() {
         headerStyle,
         headerTitleStyle,
         headerTintColor: colors.textOnDark,
+        headerRight: () => <SettingsButton style={{ marginRight: spacing.lg }} />,
       }}
     >
       <Tab.Screen
@@ -77,26 +77,6 @@ export default function TabNavigator() {
             <Ionicons name="mic-outline" size={size} color={color} />
           ),
           headerShown: false,
-        }}
-      />
-      <Tab.Screen
-        name="Calls"
-        component={CallsScreen}
-        options={{
-          title: 'Calls',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="call-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
-          ),
         }}
       />
     </Tab.Navigator>
