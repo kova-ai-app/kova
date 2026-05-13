@@ -23,7 +23,7 @@ env:
   DEEPGRAM_API_KEY: "stub"
   OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
   LLM_PROVIDER: "openrouter"
-  LLM_MODEL: "openai/gpt-oss-120b"
+  LLM_MODEL: "openai/gpt-oss-120b:free"
   SENTRY_DSN: ""
   NEXT_PUBLIC_SENTRY_DSN: ""
   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_stub"
