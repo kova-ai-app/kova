@@ -14,8 +14,49 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { fetchCalls } from '../services/api'
 import type { CallSummaryItem } from '../services/api'
 import type { RootStackParamList } from '../navigation/types'
+import { getPendingSessions } from '../stores/upload-queue'
+import type { QueuedSession } from '../stores/upload-queue'
 
 type HomeNav = NativeStackNavigationProp<RootStackParamList>
+
+// ---------------------------------------------------------------------------
+// Upload queue widget
+// ---------------------------------------------------------------------------
+
+function QueueWidget({ sessions }: { sessions: QueuedSession[] }) {
+  if (sessions.length === 0) return null
+  return (
+    <View style={styles.queueWidget}>
+      <Text style={styles.queueTitle}>Upload Queue</Text>
+      {sessions.map((session) => {
+        const uploaded = session.chunks.filter((c) => c.status === 'uploaded').length
+        const total = session.chunks.length
+        return (
+          <View key={session.sessionId} style={styles.queueRow}>
+            <View
+              style={[
+                styles.queueDot,
+                {
+                  backgroundColor:
+                    session.overallStatus === 'uploading' ? '#D97706' :
+                    session.overallStatus === 'failed' ? '#DC2626' :
+                    '#6B7280',
+                },
+              ]}
+            />
+            <Text style={styles.queueText}>
+              {session.overallStatus === 'uploading'
+                ? `Uploading — ${uploaded}/${total} chunks`
+                : session.overallStatus === 'failed'
+                ? 'Upload failed — will retry when connected'
+                : `Queued — ${total} chunk${total !== 1 ? 's' : ''}`}
+            </Text>
+          </View>
+        )
+      })}
+    </View>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -82,6 +123,16 @@ export default function HomeScreen() {
   const { getToken } = useAuth()
   const navigation = useNavigation<HomeNav>()
 
+  const [queuedSessions, setQueuedSessions] = React.useState<QueuedSession[]>([])
+
+  React.useEffect(() => {
+    setQueuedSessions(getPendingSessions())
+    const interval = setInterval(() => {
+      setQueuedSessions(getPendingSessions())
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['calls', 0],
     queryFn: async () => {
@@ -123,6 +174,7 @@ export default function HomeScreen() {
   if (calls.length === 0) {
     return (
       <View style={styles.center}>
+        <QueueWidget sessions={queuedSessions} />
         <Text style={styles.emptyTitle}>No calls yet</Text>
         <Text style={styles.emptyBody}>Tap Record to start your first call.</Text>
       </View>
@@ -131,6 +183,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <QueueWidget sessions={queuedSessions} />
       <FlatList
         data={calls}
         keyExtractor={(item) => item.id}
@@ -174,4 +227,25 @@ const styles = StyleSheet.create({
   emptyBody: { fontSize: 14, color: '#6B7280', textAlign: 'center' },
   errorText: { fontSize: 15, color: '#DC2626', marginBottom: 12 },
   retryText: { fontSize: 14, color: '#2563EB', fontWeight: '600' },
+  queueWidget: {
+    backgroundColor: '#FFFBEB',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  queueTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400E',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  queueRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
+  queueDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+  queueText: { fontSize: 13, color: '#78350F' },
 })
