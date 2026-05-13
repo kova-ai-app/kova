@@ -35,6 +35,15 @@ export const PlumbingDimensionSchema = z.enum([
 
 export const ScoringDimensionSchema = z.union([DrainDimensionSchema, PlumbingDimensionSchema])
 
+export const CustomerInputSchema = z.object({
+  name: z.string().min(1),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  address: z.string().optional(),
+  notes: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+})
+
 // ---- Request Schemas --------------------------------------------------------
 
 export const ConsentRequestSchema = z.object({
@@ -61,7 +70,7 @@ export const UploadCompleteRequestSchema = z.object({
   chunkCount: z.number().int().positive(),
   jobMetadata: z
     .object({
-      customerName: z.string().optional(),
+      customerId: z.string().uuid().optional(),
       jobType: JobTypeSchema,
       notes: z.string().optional(),
     })
@@ -108,7 +117,7 @@ export const RegisterPushTokenSchema = z.object({
 })
 
 export const TagCallRequestSchema = z.object({
-  customerName: z.string().optional(),
+  customerId: z.string().uuid().optional(),
   jobType: JobTypeSchema,
   notes: z.string().optional(),
 })

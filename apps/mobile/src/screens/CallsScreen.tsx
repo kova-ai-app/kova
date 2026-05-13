@@ -17,7 +17,7 @@ import type { RootStackParamList } from '../navigation/types'
 import { getPendingSessions } from '../stores/upload-queue'
 import type { QueuedSession } from '../stores/upload-queue'
 
-type HomeNav = NativeStackNavigationProp<RootStackParamList>
+type CallsNav = NativeStackNavigationProp<RootStackParamList>
 
 // ---------------------------------------------------------------------------
 // Upload queue widget
@@ -116,12 +116,12 @@ function CallRow({ item, onPress }: { item: CallSummaryItem; onPress: () => void
 }
 
 // ---------------------------------------------------------------------------
-// HomeScreen
+// CallsScreen
 // ---------------------------------------------------------------------------
 
-export default function HomeScreen() {
+export default function CallsScreen() {
   const { getToken } = useAuth()
-  const navigation = useNavigation<HomeNav>()
+  const navigation = useNavigation<CallsNav>()
 
   const [queuedSessions, setQueuedSessions] = React.useState<QueuedSession[]>([])
 

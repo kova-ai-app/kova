@@ -66,6 +66,17 @@ export interface User {
   languagePref: Language
 }
 
+export interface Customer {
+  id: string
+  companyId: string
+  name: string
+  phone?: string
+  email?: string
+  address?: string
+  notes?: string
+  tags: string[]
+}
+
 export interface Call {
   id: string
   companyId: string
@@ -80,7 +91,7 @@ export interface Call {
   status: CallStatus
   consentLoggedAt?: string
   declineReason?: string
-  customerName?: string
+  customerId?: string
   jobType?: JobType
   notes?: string
 }
@@ -96,6 +107,7 @@ export interface CallSummary {
   opportunityTotalLow?: number
   opportunityTotalHigh?: number
   jobType?: JobType
+  customerId?: string
   customerName?: string
 }
 
@@ -224,7 +236,7 @@ export interface Job {
   id: string
   companyId: string
   techId: string
-  customerName?: string
+  customerId?: string
   jobType: JobType
   callId: string
 }
@@ -258,7 +270,7 @@ export interface UploadCompleteRequest {
   totalDurationSec: number
   chunkCount: number
   jobMetadata?: {
-    customerName?: string
+    customerId?: string
     jobType: JobType
     notes?: string
   }

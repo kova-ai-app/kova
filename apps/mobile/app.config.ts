@@ -1,0 +1,100 @@
+import type { ExpoConfig } from 'expo/config'
+
+import withLocalIosNoApns from './plugins/with-local-ios-no-apns.js'
+
+const isLocalIosBuild = process.env.LOCAL_IOS_BUILD === '1'
+
+const plugins: NonNullable<ExpoConfig['plugins']> = [
+  [
+    'expo-dev-client',
+    {
+      launchMode: 'most-recent',
+    },
+  ],
+]
+
+if (!isLocalIosBuild) {
+  plugins.push([
+    'expo-notifications',
+    {
+      icon: './assets/notification-icon.png',
+      color: '#2563EB',
+      androidMode: 'default',
+      androidCollapsedTitle: 'Kova',
+      iosDisplayInForeground: true,
+      enableBackgroundRemoteNotifications: true,
+    },
+  ])
+}
+
+if (isLocalIosBuild) {
+  plugins.push(withLocalIosNoApns)
+}
+
+plugins.push(
+  [
+    '@sentry/react-native/expo',
+    {
+      url: 'https://sentry.io/',
+      project: 'kova-mobile',
+      organization: 'kova',
+    },
+  ],
+  'expo-secure-store',
+)
+
+const config: ExpoConfig = {
+  name: 'Kova',
+  slug: 'kova',
+  version: '1.0.0',
+  scheme: 'kova',
+  orientation: 'portrait',
+  icon: './assets/icon.png',
+  userInterfaceStyle: 'automatic',
+  newArchEnabled: true,
+  splash: {
+    image: './assets/splash-icon.png',
+    resizeMode: 'contain',
+    backgroundColor: '#ffffff',
+  },
+  ios: {
+    supportsTablet: false,
+    bundleIdentifier: 'com.kovaapp.mobile',
+    infoPlist: {
+      NSMicrophoneUsageDescription:
+        'Kova records service calls to help your team improve revenue.',
+      NSBackgroundModes: isLocalIosBuild ? ['audio'] : ['audio', 'remote-notification'],
+    },
+    buildNumber: '1',
+  },
+  android: {
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#ffffff',
+    },
+    package: 'com.kovaapp.mobile',
+    permissions: [
+      'RECORD_AUDIO',
+      'FOREGROUND_SERVICE',
+      'FOREGROUND_SERVICE_MICROPHONE',
+      'RECEIVE_BOOT_COMPLETED',
+      'POST_NOTIFICATIONS',
+    ],
+    versionCode: 1,
+  },
+  web: {
+    bundler: 'metro',
+  },
+  plugins,
+  experiments: {
+    typedRoutes: false,
+  },
+  extra: {
+    eas: {
+      projectId: 'be7029e9-0e98-4f49-a7ae-42eb8b185d82',
+    },
+  },
+  owner: 'kova-ai',
+}
+
+export default config

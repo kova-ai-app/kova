@@ -57,8 +57,13 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return null
   }
 
-  const tokenData = await Notifications.getExpoPushTokenAsync({ projectId })
-  return tokenData.data
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId })
+    return tokenData.data
+  } catch (error) {
+    console.warn('[Notifications] Push token registration unavailable', error)
+    return null
+  }
 }
 
 // ---------------------------------------------------------------------------

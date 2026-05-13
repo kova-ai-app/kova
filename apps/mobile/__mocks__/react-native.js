@@ -12,6 +12,18 @@ const Alert = {
   alert: () => {},
 }
 
+const createComponent = (name) => name
+
+const View = createComponent('View')
+const Text = createComponent('Text')
+const FlatList = createComponent('FlatList')
+const TouchableOpacity = createComponent('TouchableOpacity')
+const ActivityIndicator = createComponent('ActivityIndicator')
+
+const StyleSheet = {
+  create: (styles) => styles,
+}
+
 const PermissionsAndroid = {
   request: async () => 'granted',
   PERMISSIONS: { RECORD_AUDIO: 'android.permission.RECORD_AUDIO' },
@@ -31,6 +43,12 @@ const NativeModules = {}
 module.exports = {
   Platform,
   Alert,
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
   PermissionsAndroid,
   AppState,
   TurboModuleRegistry,

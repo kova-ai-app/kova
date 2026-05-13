@@ -42,6 +42,25 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ---- customers --------------------------------------------------------------
+
+export const customers = pgTable('customers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  companyId: uuid('company_id')
+    .notNull()
+    .references(() => companies.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  phone: text('phone'),
+  email: text('email'),
+  address: text('address'),
+  notes: text('notes'),
+  tags: jsonb('tags').notNull().default([]),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  companyIdx: index('customers_company').on(table.companyId),
+  phoneIdx: index('customers_phone').on(table.phone),
+}))
+
 // ---- calls ------------------------------------------------------------------
 
 export const calls = pgTable(
@@ -68,7 +87,7 @@ export const calls = pgTable(
       .default('uploading'),
     consentLoggedAt: timestamp('consent_logged_at'),
     declineReason: text('decline_reason'),
-    customerName: text('customer_name'),
+    customerId: uuid('customer_id').references(() => customers.id),
     jobType: text('job_type', { enum: ['drain', 'plumbing', 'both'] }),
     notes: text('notes'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -209,7 +228,7 @@ export const jobs = pgTable('jobs', {
   techId: uuid('tech_id')
     .notNull()
     .references(() => users.id),
-  customerName: text('customer_name'),
+  customerId: uuid('customer_id').references(() => customers.id),
   jobType: text('job_type', { enum: ['drain', 'plumbing', 'both'] }).notNull(),
   callId: uuid('call_id').references(() => calls.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -262,7 +281,12 @@ export const pushTokens = pgTable('push_tokens', {
 export const companiesRelations = relations(companies, ({ many }) => ({
   users: many(users),
   calls: many(calls),
+  customers: many(customers),
   pricebookItems: many(pricebookItems),
+}))
+
+export const customersRelations = relations(customers, ({ one }) => ({
+  company: one(companies, { fields: [customers.companyId], references: [companies.id] }),
 }))
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -275,6 +299,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 export const callsRelations = relations(calls, ({ one, many }) => ({
   company: one(companies, { fields: [calls.companyId], references: [companies.id] }),
   tech: one(users, { fields: [calls.techId], references: [users.id] }),
+  customer: one(customers, { fields: [calls.customerId], references: [customers.id] }),
   transcript: one(transcripts, { fields: [calls.transcriptId], references: [transcripts.id] }),
   score: one(scores, { fields: [calls.scoreId], references: [scores.id] }),
   coachingPoints: many(coachingPoints),

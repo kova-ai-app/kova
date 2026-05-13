@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { Alert, Platform } from 'react-native'
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as SecureStore from 'expo-secure-store'
 import { StatusBar } from 'expo-status-bar'
 import * as Sentry from '@sentry/react-native'
@@ -47,6 +48,13 @@ const tokenCache = {
 }
 
 const CLERK_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+    },
+  },
+})
 
 function AppInner() {
   const { getToken } = useAuth()
@@ -148,16 +156,20 @@ export default function App() {
   if (!CLERK_KEY) {
     // Clerk not configured — show scaffold without upload manager
     return (
-      <>
-        <StatusBar style="auto" />
-        <RootNavigator />
-      </>
+      <QueryClientProvider client={queryClient}>
+        <>
+          <StatusBar style="auto" />
+          <RootNavigator />
+        </>
+      </QueryClientProvider>
     )
   }
 
   return (
-    <ClerkProvider publishableKey={CLERK_KEY} tokenCache={tokenCache}>
-      <AppInner />
-    </ClerkProvider>
+    <QueryClientProvider client={queryClient}>
+      <ClerkProvider publishableKey={CLERK_KEY} tokenCache={tokenCache}>
+        <AppInner />
+      </ClerkProvider>
+    </QueryClientProvider>
   )
 }
