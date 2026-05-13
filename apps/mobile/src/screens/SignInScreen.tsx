@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { useSignIn, isClerkAPIResponseError } from '@clerk/clerk-expo'
+import { colors, font, radii, spacing } from '../theme'
 
 // ---------------------------------------------------------------------------
 // SignInScreen — Phone OTP authentication
@@ -118,7 +119,7 @@ function OTPSignIn() {
           {phase === 'phone' ? (
             <>
               <Text style={styles.label}>Phone Number</Text>
-              <Text style={styles.hint}>Enter in E.164 format: +15551234567</Text>
+              <Text style={styles.helperText}>Enter in E.164 format: +15551234567</Text>
               <TextInput
                 style={styles.input}
                 placeholder="+15551234567"
@@ -143,7 +144,7 @@ function OTPSignIn() {
           ) : (
             <>
               <Text style={styles.label}>Enter 6-digit code</Text>
-              <Text style={styles.hint}>Sent to {phone}</Text>
+              <Text style={styles.helperText}>Sent to {phone}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="000000"
@@ -166,18 +167,19 @@ function OTPSignIn() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
+                style={styles.backButton}
                 onPress={() => {
                   setPhase('phone')
                   setCode('')
                   setError(null)
                 }}
               >
-                <Text style={styles.back}>← Back</Text>
+                <Text style={styles.backText}>← Back</Text>
               </TouchableOpacity>
             </>
           )}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
       </View>
     </View>
@@ -192,30 +194,55 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  inner: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  logo: { fontSize: 40, fontWeight: '800', color: '#2563EB', marginBottom: 4 },
-  tagline: { fontSize: 14, color: '#6B7280', marginBottom: 48 },
+  container: { flex: 1, backgroundColor: colors.bgPage },
+  inner: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+  logo: { fontFamily: font.extrabold, fontSize: 40, color: colors.brand, marginBottom: 4 },
+  tagline: { fontFamily: font.regular, fontSize: 14, color: colors.textSecondary, marginBottom: 48 },
   form: { width: '100%', gap: 12 },
-  label: { fontSize: 14, fontWeight: '500', color: '#374151' },
-  hint: { fontSize: 12, color: '#6B7280', marginTop: -4 },
+  label: {
+    fontFamily: font.medium,
+    fontSize: 14,
+    color: colors.textPrimary,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
   input: {
+    width: '100%',
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    fontFamily: font.regular,
     fontSize: 16,
-    backgroundColor: '#FFFFFF',
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
   },
   button: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 14,
-    borderRadius: 8,
+    width: '100%',
+    backgroundColor: colors.brand,
+    borderRadius: radii.md,
+    paddingVertical: 16,
     alignItems: 'center',
+    marginTop: spacing.sm,
   },
   buttonDisabled: { backgroundColor: '#93C5FD' },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  back: { color: '#2563EB', textAlign: 'center', marginTop: 8 },
-  error: { color: '#DC2626', fontSize: 14, textAlign: 'center' },
+  buttonText: { fontFamily: font.bold, color: '#FFFFFF', fontSize: 16 },
+  errorText: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    color: colors.danger,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  backButton: { marginTop: spacing.lg },
+  backText: { fontFamily: font.medium, fontSize: 14, color: colors.brand },
+  helperText: {
+    fontFamily: font.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
 })
